@@ -13,6 +13,7 @@
     </style>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
+        // Table Functions
         function toggleTable() {
             var table = document.getElementById("dataTable");
             if (table.innerHTML.trim() == "") {
@@ -63,19 +64,79 @@
             }
         }
 
-        document.getElementById('column-select').addEventListener('change', function() {
-            var selectedColumn = this.value;
-            fetch('/plot', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ column: selectedColumn })
-            })
-            .then(response => response.json())
-            .then(data => {
-                var img = document.createElement('img'); img.src = 'data:image/png;base64,' + data.plot_url; document.getElementById('plot').innerHTML = ''; document.getElementById('plot').appendChild(img);});
-        });
+        // EDA Functions
+        window.onload = function() {
+            document.getElementById('hist-button').addEventListener('click', function() {
+                var selectedColumn = document.getElementById('num-column-select').value;
+                fetch('/plot', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ column: selectedColumn, plot_type: 'hist_box' })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    var img = document.createElement('img');
+                    img.src = 'data:image/png;base64,' + data.plot_url;
+                    document.getElementById('plot').innerHTML = '';
+                    document.getElementById('plot').appendChild(img);
+                });
+            });
+            
+            document.getElementById('box-button').addEventListener('click', function() {
+                var selectedColumn = document.getElementById('box-column-select').value;
+                fetch('/plot', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ column: selectedColumn, plot_type: 'box' })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    var img = document.createElement('img');
+                    img.src = 'data:image/png;base64,' + data.plot_url;
+                    document.getElementById('plot').innerHTML = '';
+                    document.getElementById('plot').appendChild(img);
+                });
+            });
+
+            document.getElementById('bar-button').addEventListener('click', function() {
+                var selectedColumn = document.getElementById('cat-column-select').value;
+                fetch('/plot', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ column: selectedColumn, plot_type: 'bar' })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    var img = document.createElement('img');
+                    img.src = 'data:image/png;base64,' + data.plot_url;
+                    document.getElementById('plot').innerHTML = '';
+                    document.getElementById('plot').appendChild(img);
+                });
+            });
+
+            document.getElementById('heatmap-button').addEventListener('click', function() {
+                fetch('/plot', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ plot_type: 'heatmap' })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    var img = document.createElement('img');
+                    img.src = 'data:image/png;base64,' + data.plot_url;
+                    document.getElementById('plot').innerHTML = '';
+                    document.getElementById('plot').appendChild(img);
+                });
+            });
+        };
     </script>
 </head>
 <body>
@@ -93,10 +154,32 @@
         {{ tables[0]|safe if tables else 'No tables' }}
     </div>
     <h1>Plot from CSV</h1>
-    <select id="column-select">
-        {% for column in columns %}
-            <option value="{{ column }}">{{ column }}</option>
-        {% endfor %}
-    </select>
+    <div>
+        <select id="num-column-select">
+            {% for column in num_columns %}
+                <option value="{{ column }}">{{ column }}</option>
+            {% endfor %}
+        </select>
+        <button id="hist-button">Plot Histogram</button>
+    </div>
+    <div>
+        <select id="box-column-select">
+            {% for column in num_columns %}
+                <option value="{{ column }}">{{ column }}</option>
+            {% endfor %}
+        </select>
+        <button id="box-button">Plot Box Plot</button>
+    </div>
+    <div>
+        <select id="cat-column-select">
+            {% for column in cat_columns %}
+                <option value="{{ column }}">{{ column }}</option>
+            {% endfor %}
+        </select>
+        <button id="bar-button">Plot Bar</button>
+    </div>
+    <div>
+        <button id="heatmap-button">Correlation Heatmap</button>
+    </div>
     <div id="plot"></div>
 </body>
