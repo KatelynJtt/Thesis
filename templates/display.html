@@ -1,7 +1,6 @@
-<!DOCTYPE html>
-<html>
 <head>
-    <title>Data Display</title>
+    <meta charset="UTF-8">
+    <title>Data Display and Plot</title>
     <style>
         .data {
             border-collapse: collapse;
@@ -12,9 +11,9 @@
             padding: 8px;
         }
     </style>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
         function toggleTable() {
-            var table = document.getElementById("dataTable");
             var table = document.getElementById("dataTable");
             if (table.innerHTML.trim() == "") {
                 document.getElementById("message").innerHTML = "No table to toggle.";
@@ -63,11 +62,25 @@
                 document.getElementById("message").innerHTML = "";
             }
         }
+
+        document.getElementById('column-select').addEventListener('change', function() {
+            var selectedColumn = this.value;
+            fetch('/plot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ column: selectedColumn })
+            })
+            .then(response => response.json())
+            .then(data => {
+                var img = document.createElement('img'); img.src = 'data:image/png;base64,' + data.plot_url; document.getElementById('plot').innerHTML = ''; document.getElementById('plot').appendChild(img);});
+        });
     </script>
 </head>
 <body>
     <h1>Upload CSV File</h1>
-    <form method="POST" enctype="multipart/form-data">
+    <form action="/upload" method="POST" enctype="multipart/form-data">
         <input type="file" name="file">
         <input type="submit" value="Upload">
     </form>
@@ -76,8 +89,14 @@
     <button onclick="toggleTable()">Toggle Table</button>
     <button onclick="downloadTable()">Download Table</button>
     <button onclick="clearTable()">Clear Table</button>
-    {% for table in tables %}
-        <div id="dataTable">{{ table|safe }}</div>
-    {% endfor %}
+    <div id="dataTable">
+        {{ tables[0]|safe if tables else 'No tables' }}
+    </div>
+    <h1>Plot from CSV</h1>
+    <select id="column-select">
+        {% for column in columns %}
+            <option value="{{ column }}">{{ column }}</option>
+        {% endfor %}
+    </select>
+    <div id="plot"></div>
 </body>
-</html>
