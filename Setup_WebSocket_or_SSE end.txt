@@ -1,0 +1,106 @@
+Step 1: Setup a WebSocket or SSE endpoint on the server
+
+First, you need to setup a WebSocket or SSE endpoint in your Flask application. This endpoint will be used to send real-time updates to the client about the progress of the table creation. You can use Flask extensions like Flask-SocketIO for WebSockets or Flask-SSE for SSE.
+
+Here’s an example of how to setup a WebSocket endpoint using Flask-SocketIO:
+PYTHON
+from flask import Flask
+from flask_socketio import SocketIO
+
+app = Flask(__name__)
+socketio = SocketIO(app)
+
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
+
+In this code, we’re creating a new Flask application and a new SocketIO instance. The @socketio.on('connect') and @socketio.on('disconnect') decorators are used to handle connect and disconnect events.
+
+Step 2: Start table creation in a separate thread
+
+After receiving the CSV file, you can start the table creation process in a separate thread. This allows the main thread to return a response to the client and free up the connection. You can use Python’s built-in threading module to create a new thread.
+
+Here’s an example:
+PYTHON
+import threading
+
+def create_table(file):
+    # Code to create table from file
+    pass
+
+@app.route('/upload', methods=['POST'])
+def handle_upload():
+    file = request.files['file']
+    thread = threading.Thread(target=create_table, args=(file,))
+    thread.start()
+    return 'Upload started'
+
+In this code, we’re creating a new thread that runs the create_table function when a file is uploaded. The create_table function should contain the code to create a table from the CSV file.
+
+Step 3: Send progress updates
+
+As the table creation progresses, you can send updates to the client through the WebSocket connection. You can use the socketio.emit function to send messages to the client.
+
+Here’s an example:
+PYTHON
+def create_table(file):
+    for i, row in enumerate(file):
+        # Code to process row and add to table
+        if i % 1000 == 0:  # Send update every 1000 rows
+            socketio.emit('progress', {'percentage': i / total_rows * 100})
+
+In this code, we’re sending a ‘progress’ message to the client every 1000 rows. The message contains the current progress percentage.
+
+Step 4: Open a WebSocket connection on the client
+
+When the file upload starts, you can open a WebSocket connection to the server. This can be done using the native WebSocket API in JavaScript.
+
+Here’s an example:
+JS
+const socket = new WebSocket('ws://your-server.com/socketio');
+
+socket.addEventListener('open', function (event) {
+    console.log('WebSocket connection opened');
+});
+
+socket.addEventListener('message', function (event) {
+    console.log('Message from server: ', event.data);
+});
+
+In this code, we’re creating a new WebSocket connection to the server and adding event listeners for the ‘open’ and ‘message’ events.
+
+Step 5: Listen for messages
+
+You can then listen for messages from the server on the WebSocket connection. These messages will contain the progress updates.
+
+Here’s an example:
+JS
+socket.addEventListener('message', function (event) {
+    const data = JSON.parse(event.data);
+    if (data.type === 'progress') {
+        console.log('Progress: ', data.percentage);
+    }
+});
+
+In this code, we’re listening for ‘message’ events on the WebSocket connection and logging the progress percentage to the console.
+
+Step 6: Update the UI
+
+Finally, you can update the progress message in your UI whenever a new message is received. This can be done by setting the textContent of a DOM element.
+
+Here’s an example:
+JS
+const progressElement = document.getElementById('progress');
+
+socket.addEventListener('message', function (event) {
+    const data = JSON.parse(event.data);
+    if (data.type === 'progress') {
+        progressElement.textContent = `Creating table... ${data.percentage}%`;
+    }
+});
+
+In this code, we’re updating the text content of the ‘progress’ element with the current progress percentage.

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Home</title>
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <!-- defer: Tell browser to continue parsing HTML while script downloads and wait until HTML is fully parsed to execute script -->
+  <!-- Wait to execute script b/c it references elements in the HTML -->
+  <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+
+</head>
+
+<body>
+
+  <h1>Explore Data Analysis</h1>
+  
+  <div>
+    <form id="fileForm">
+      <label>Upload CSV file:</label>
+      <!-- File input -->
+      <input type="file" id="fileInput">
+      <!-- Button to trigger upload -->
+      <!-- set button type as submit and then listen for submit event is js -->
+      <button id="uploadButton" type="submit">Upload</button>
+      <p id="uploadMessage"></p>
+      <div id="loadingIndicator" style="display: none;">Uploading...</div>
+    </form>
+  </div>
+  <!-- Display uploaded data -->
+  <div id="dataset"></div>
+
+  <div id="summary"></div>
+
+  <div id="plots">
+
+    <div id="univariate">
+      <label>Univariate Analysis:</label>
+      <select id="variableSelect"></select>
+      <button onclick="plotUnivariate()">Plot</button>
+      <div id="univariatePlot"></div>
+    </div>
+
+    <div id="bivariate">
+      <label>Bivariate Analysis:</label>
+      <select multiple id="bioSelect"></select>
+      <button onclick="plotBivariate()">Plot</button>
+      <div id="bivariatePlot"></div>
+    </div>
+
+    <div id="multivariate">
+      <label>Multivariate Analysis:</label>
+      <select multiple id="multiSelect"></select>
+      <button onclick="plotMultivariate()">Plot</button>
+      <div id="multivariatePlot"></div>
+    </div>
+
+  </div>
+
+</body>
+</html>

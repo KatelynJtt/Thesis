@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Display</title>
+    <style>
+        .data {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .data th, .data td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+    </style>
+    <script>
+        function toggleTable() {
+            var table = document.getElementById("dataTable");
+            var table = document.getElementById("dataTable");
+            if (table.innerHTML.trim() == "") {
+                document.getElementById("message").innerHTML = "No table to toggle.";
+            } else {
+                if (table.style.display === "none") {
+                    table.style.display = "block";
+                } else {
+                    table.style.display = "none";
+                }
+                document.getElementById("message").innerHTML = "";
+            }
+        }
+
+        function clearTable() {
+            var table = document.getElementById("dataTable");
+            if (table.innerHTML.trim() == "") {
+                document.getElementById("message").innerHTML = "No table to clear.";
+            } else {
+                table.innerHTML = "";
+                document.getElementById("message").innerHTML = "";
+            }
+        }
+
+        function downloadTable() {
+            var table = document.getElementById("dataTable");
+            if (table.innerHTML.trim() == "") {
+                document.getElementById("message").innerHTML = "No table to download.";
+            } else {
+                var csv = [];
+                var rows = table.getElementsByTagName("tr");
+
+                for (var i = 0; i < rows.length; i++) {
+                    var row = [], cols = rows[i].querySelectorAll("td, th");
+                    for (var j = 0; j < cols.length; j++)
+                        row.push(cols[j].innerText);
+                    csv.push(row.join(","));
+                }
+
+                var csvData = new Blob([csv.join("\n")], { type: 'text/csv' });
+                var csvUrl = URL.createObjectURL(csvData);
+                var hiddenElement = document.createElement('a');
+                hiddenElement.href = csvUrl;
+                hiddenElement.target = '_blank';
+                hiddenElement.download = 'table.csv';
+                hiddenElement.click();
+                document.getElementById("message").innerHTML = "";
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Upload CSV File</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="submit" value="Upload">
+    </form>
+    <h1>Data Display</h1>
+    <p id="message"></p>
+    <button onclick="toggleTable()">Toggle Table</button>
+    <button onclick="downloadTable()">Download Table</button>
+    <button onclick="clearTable()">Clear Table</button>
+    {% for table in tables %}
+        <div id="dataTable">{{ table|safe }}</div>
+    {% endfor %}
+</body>
+</html>
