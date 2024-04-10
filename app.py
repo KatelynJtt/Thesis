@@ -7,9 +7,24 @@ import matplotlib.pyplot as plt
 import os
 from io import BytesIO
 import base64
+import logging
 
 app = Flask(__name__)
 
+from logging.handlers import RotatingFileHandler
+
+#-------------------------------------------------------Log functions for debugging specifics
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error('Server Error: %s', (error))
+    return "500 error", 500
+
+@app.errorhandler(Exception)
+def unhandled_exception(e):
+    app.logger.error('Unhandled Exception: %s', (e))
+    return "500 error", 500
+
+#---------------------------------------------------Display Functions
 @app.route('/', methods=['GET', 'POST'])
 def display():
     if request.method == 'POST':
@@ -29,6 +44,7 @@ def display():
             return "File type is incorrect. Please upload a .csv file."
     return render_template('display.html')
 
+#------------------------------------------------------------------Upload Function
 @app.route('/upload', methods=['POST'])
 def upload_file():
     file = request.files['file']
@@ -39,6 +55,7 @@ def upload_file():
         return render_template('display.html', tables=[df.to_html(classes='data')], num_columns=num_columns, cat_columns=cat_columns)
     return redirect(url_for('index'))
 
+#-----------------------------------------------------------------Plot Function (EDA)
 @app.route('/plot', methods=['POST'])
 def generate_plot():
     try:

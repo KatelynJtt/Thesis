@@ -12,6 +12,68 @@
         }
     </style>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Upload CSV File</h1>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="submit" value="Upload">
+    </form>
+    <h1>Data Display</h1>
+    <p id="message"></p>
+    <button onclick="toggleTable()">Toggle Table</button>
+    <button onclick="downloadTable()">Download Table</button>
+    <button onclick="clearTable()">Clear Table</button>
+    <div id="dataTable">
+        {{ tables[0]|safe if tables else 'No tables' }}
+    </div>
+    <h1>Plot from CSV</h1>
+    <div>
+        <select id="column1-select">
+            {% for column in num_columns %}
+                <option value="{{ column }}">{{ column }}</option>
+            {% endfor %}
+        </select>
+        <select id="column2-select">
+            {% for column in num_columns %}
+                <option value="{{ column }}">{{ column }}</option>
+            {% endfor %}
+        </select>
+        <button id="hist-button">Plot Histogram</button>
+        <div id="hist-plot"></div>
+    </div>
+    <div>
+        <select id="column1-select">
+            {% for column in num_columns %}
+                <option value="{{ column }}">{{ column }}</option>
+            {% endfor %}
+        </select>
+        <select id="column2-select">
+            {% for column in num_columns %}
+                <option value="{{ column }}">{{ column }}</option>
+            {% endfor %}
+        </select>
+        <button id="box-button">Plot Box Plot</button>
+        <div id="box-plot"></div>
+    </div>
+    <div>
+        <select id="column1-select">
+            {% for column in num_columns %}
+                <option value="{{ column }}">{{ column }}</option>
+            {% endfor %}
+        </select>
+        <select id="column2-select">
+            {% for column in num_columns %}
+                <option value="{{ column }}">{{ column }}</option>
+            {% endfor %}
+        </select>
+        <button id="bar-button">Plot Bar</button>
+        <div id="bar-plot"></div>
+    </div>
+    <div>
+        <button id="heatmap-button">Correlation Heatmap</button>
+    </div>
+    <!--Java Script for Plotly Plots-->
     <script>
         // Table Functions
         function toggleTable() {
@@ -66,120 +128,81 @@
 
         // EDA Functions
         window.onload = function() {
-            document.getElementById('hist-button').addEventListener('click', function() {
-                var selectedColumn = document.getElementById('num-column-select').value;
-                fetch('/plot', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ column: selectedColumn, plot_type: 'hist_box' })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    var img = document.createElement('img');
-                    img.src = 'data:image/png;base64,' + data.plot_url;
-                    document.getElementById('plot').innerHTML = '';
-                    document.getElementById('plot').appendChild(img);
-                });
-            });
-            
-            document.getElementById('box-button').addEventListener('click', function() {
-                var selectedColumn = document.getElementById('box-column-select').value;
-                fetch('/plot', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ column: selectedColumn, plot_type: 'box' })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    var img = document.createElement('img');
-                    img.src = 'data:image/png;base64,' + data.plot_url;
-                    document.getElementById('plot').innerHTML = '';
-                    document.getElementById('plot').appendChild(img);
-                });
+
+            // Get the select elements
+            let column1Select = document.getElementById('column1-select');
+            let column2Select = document.getElementById('column2-select');
+
+            // Add event listener to column1 select element
+            column1Select.addEventListener('change', function() {
+                // Get the selected option of column1
+                let selectedOption = this.value;
+
+                // Loop through the options of column2
+                for(let i = 0; i < column2Select.options.length; i++) {
+                    let option = column2Select.options[i];
+
+                    // If the option is the same as the selected option of column1, disable it
+                    if(option.value === selectedOption) {
+                        option.disabled = true;
+                    } else {
+                        // Otherwise, enable it
+                        option.disabled = false;
+                    }
+                }
             });
 
-            document.getElementById('bar-button').addEventListener('click', function() {
-                var selectedColumn = document.getElementById('cat-column-select').value;
-                fetch('/plot', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ column: selectedColumn, plot_type: 'bar' })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    var img = document.createElement('img');
-                    img.src = 'data:image/png;base64,' + data.plot_url;
-                    document.getElementById('plot').innerHTML = '';
-                    document.getElementById('plot').appendChild(img);
-                });
-            });
+            function plot() {
+                // Get plot type from button ID
+                let plotType = this.id.split('-')[0]; 
 
-            document.getElementById('heatmap-button').addEventListener('click', function() {
+                // Get selected columns from dropdowns
+                let column1 = document.getElementById('column1-select').value;
+                let column2 = document.getElementById('column2-select').value;
+                // Determine div to update based on plot type
+                let plotDiv;
+                if (plotType === 'hist') {
+                    plotDiv = document.getElementById('hist-plot');
+                } else if (plotType === 'box') {
+                    plotDiv = document.getElementById('box-plot');
+                } else {
+                    plotDiv = document.getElementById('bar-plot');
+                }
+                
+                // Show loading indicator
+                plotDiv.innerHTML = 'Loading plot...';
+                // Call Flask endpoint
                 fetch('/plot', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ plot_type: 'heatmap' })
+                    body: JSON.stringify({
+                        plot_type: plotType,
+                        columns: [column1, column2]
+                    })
                 })
+
+                // Handle response  
                 .then(response => response.json())
                 .then(data => {
-                    var img = document.createElement('img');
-                    img.src = 'data:image/png;base64,' + data.plot_url;
-                    document.getElementById('plot').innerHTML = '';
-                    document.getElementById('plot').appendChild(img);
-                });
-            });
+
+                    // Clear loading indicator
+                    plotDiv.innerHTML = '';
+                    // Create image element
+                    let img = document.createElement('img');
+                    img.src = 'data:image/png;base64,' + data.plot;
+                    // Display image
+                    plotDiv.appendChild(img);
+                })
+            };
+
+            // Histogram button
+            document.getElementById('hist-button').addEventListener('click', plot); 
+            // Boxplot button
+            document.getElementById('box-button').addEventListener('click', plot);
+            // Bar chart button
+            document.getElementById('bar-button').addEventListener('click', plot);
         };
     </script>
-</head>
-<body>
-    <h1>Upload CSV File</h1>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="file">
-        <input type="submit" value="Upload">
-    </form>
-    <h1>Data Display</h1>
-    <p id="message"></p>
-    <button onclick="toggleTable()">Toggle Table</button>
-    <button onclick="downloadTable()">Download Table</button>
-    <button onclick="clearTable()">Clear Table</button>
-    <div id="dataTable">
-        {{ tables[0]|safe if tables else 'No tables' }}
-    </div>
-    <h1>Plot from CSV</h1>
-    <div>
-        <select id="num-column-select">
-            {% for column in num_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-        </select>
-        <button id="hist-button">Plot Histogram</button>
-    </div>
-    <div>
-        <select id="box-column-select">
-            {% for column in num_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-        </select>
-        <button id="box-button">Plot Box Plot</button>
-    </div>
-    <div>
-        <select id="cat-column-select">
-            {% for column in cat_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-        </select>
-        <button id="bar-button">Plot Bar</button>
-    </div>
-    <div>
-        <button id="heatmap-button">Correlation Heatmap</button>
-    </div>
-    <div id="plot"></div>
 </body>
