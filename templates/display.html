@@ -21,9 +21,9 @@
     </form>
     <h1>Data Display</h1>
     <p id="message"></p>
-    <button onclick="toggleTable()">Toggle Table</button>
-    <button onclick="downloadTable()">Download Table</button>
-    <button onclick="clearTable()">Clear Table</button>
+    <button onclick="toggleTable()" title="Show/hide the data table">Toggle Table</button>
+    <button onclick="downloadTable()" title="Download the data table as a CSV file">Download Table</button>
+    <button onclick="clearTable()" title="Clear the data table">Clear Table</button>
     <div id="dataTable">
         {{ tables[0]|safe if tables else 'No tables' }}
     </div>
@@ -39,7 +39,7 @@
                 <option value="{{ column }}">{{ column }}</option>
             {% endfor %}
         </select>
-        <button id="hist-button">Plot Histogram</button>
+        <button id="hist-button" title="Plot a histogram of the selected columns">Plot Histogram</button>
         <div id="hist-plot"></div>
     </div>
     <div>
@@ -53,7 +53,7 @@
                 <option value="{{ column }}">{{ column }}</option>
             {% endfor %}
         </select>
-        <button id="box-button">Plot Box Plot</button>
+        <button id="box-button" title="Plot a box plot of the selected columns">Plot Box Plot</button>
         <div id="box-plot"></div>
     </div>
     <div>
@@ -67,11 +67,11 @@
                 <option value="{{ column }}">{{ column }}</option>
             {% endfor %}
         </select>
-        <button id="bar-button">Plot Bar</button>
+        <button id="bar-button" title="Plot a bar chart of the selected columns">Plot Bar</button>
         <div id="bar-plot"></div>
     </div>
     <div>
-        <button id="heatmap-button">Correlation Heatmap</button>
+        <button id="heatmap-button" title="Plot a correlation heatmap">Correlation Heatmap</button>
     </div>
     <!--Java Script for Plotly Plots-->
     <script>
