@@ -2,12 +2,11 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
-import seaborn as sns
 import matplotlib.pyplot as plt
 import os
-from io import BytesIO
-import base64
-import logging
+import plotly
+import plotly.graph_objs as go
+import json
 
 app = Flask(__name__)
 
@@ -56,43 +55,36 @@ def upload_file():
     return redirect(url_for('index'))
 
 #-----------------------------------------------------------------Plot Function (EDA)
+# Change to take data from database NOT FILE!!!!!!!
 @app.route('/plot', methods=['POST'])
-def generate_plot():
-    try:
+def plot():
+    if request.is_json:
+        # Proceed if the request data is in JSON format
         data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
-
-        df = pd.DataFrame(data)
-        plot_type = data.get('plot_type')
-        column = data.get('column')
-
-        if plot_type not in ['hist', 'box', 'bar', 'heatmap']:
-            return jsonify({'error': 'Invalid plot type'}), 400
-
-        if plot_type in ['hist', 'box', 'bar'] and column not in df.columns:
-            return jsonify({'error': 'Invalid column name'}), 400
-
-        if plot_type == 'hist':
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.histplot(data=df, x=column, ax=ax)
+        column1 = data['column1']
+        column2 = data['column2']
+        plot_type = data['plot_type']
+        file = request.files['file']
+        db_dir = './database'
+        db_name = os.path.splitext(file.filename)[0] + '_database.db'
+        table_name = os.path.splitext(file.filename)[0] + '_table'
+        db_path = os.path.join(db_dir, db_name)
+        engine = create_engine('sqlite:///' + db_path)
+        df = pd.read_sql_table(table_name, engine)
+        if plot_type == 'histogram':
+            data = [go.Histogram(x=df[column1], y=df[column2])]
         elif plot_type == 'box':
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.boxplot(data=df, x=column, ax=ax)
+            data = [go.Box(y=df[column1], x=df[column2])]
         elif plot_type == 'bar':
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.countplot(data=df, x=column, ax=ax)
+            data = [go.Bar(x=df[column1].value_counts().index, y=df[column2].value_counts().values)]
         elif plot_type == 'heatmap':
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.heatmap(df.corr(), annot=True, fmt=".2f", ax=ax)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    
-    img = BytesIO()
-    plt.savefig(img, format='png')
-    img.seek(0)
-    plot_url = base64.b64encode(img.getvalue()).decode()
-    return jsonify({'plot_url': plot_url})
+            data = [go.Heatmap(z=df[[column1, column2]].corr().values, x=df[[column1, column2]].columns, y=df[[column1, column2]].columns, colorscale='Viridis')]
+        graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
+        return render_template('plot.html', graphJSON=graphJSON)
+    else:
+        # Return an error response if the request data is not in JSON format
+        return jsonify({"error": "Invalid data format. Expected JSON."}), 400
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'csv'

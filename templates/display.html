@@ -11,7 +11,7 @@
             padding: 8px;
         }
     </style>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
 </head>
 <body>
     <h1>Upload CSV File</h1>
@@ -27,52 +27,53 @@
     <div id="dataTable">
         {{ tables[0]|safe if tables else 'No tables' }}
     </div>
-    <h1>Plot from CSV</h1>
-    <div>
-        <select id="column1-select">
-            {% for column in num_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-        </select>
-        <select id="column2-select">
-            {% for column in num_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-        </select>
-        <button id="hist-button" title="Plot a histogram of the selected columns">Plot Histogram</button>
-        <div id="hist-plot"></div>
+    <h1>Exploratory Data Analysis</h1>
+    <div id="eda_functions" class="container">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" id="histogram-tab" data-toggle="tab" href="#histogram">Histogram</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="bar-plot-tab" data-toggle="tab" href="#bar-plot">Bar Plot</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="box-tab" data-toggle="tab" href="#box-plot">Box Plot</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="correlation-heatmap-tab" data-toggle="tab" href="#correlation-heatmap">Correlation Heatmap</a>
+            </li>
+        </ul>
+        <div class="tab-content" id="eda_functions_content">
+            <div class="tab-pane fade show active" id="histogram">
+                <select id="numeric-columns"></select>
+                <button onclick="histogram()" id="create-histogram">Create Histogram</button>
+                <div id="histogram-figure-display"></div>
+            </div>
+            <div class="tab-pane fade" id="bar-plot">
+                <select id="categorical-columns"></select>
+                <button onclick="bar_plot()" title="create-bar-plot">Create Bar Plot</button>
+                <div id="bar-plot-figure-display"></div>
+            </div>
+            <div class="tab-pane fade" id="box-plot">
+                <select id="numeric-columns"></select>
+                <button onclick="box_plot()" id="create-box-plot">Create Box Plot</button>
+                <div id="box-plot-figure-display"></div>
+            </div>
+            <div class="tab-pane fade" id="correlation-heatmap">
+                <select id="all-columns"></select>
+                <button onclick="correlation_heatmap()" id="create-correlation-heatmap">Create Correlation Heatmap</button>
+                <div id="histogram-figure-display"></div>
+            </div>
+        </div>
     </div>
-    <div>
-        <select id="column1-select">
-            {% for column in num_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-        </select>
-        <select id="column2-select">
-            {% for column in num_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-        </select>
-        <button id="box-button" title="Plot a box plot of the selected columns">Plot Box Plot</button>
-        <div id="box-plot"></div>
-    </div>
-    <div>
-        <select id="column1-select">
-            {% for column in num_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-        </select>
-        <select id="column2-select">
-            {% for column in num_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-        </select>
-        <button id="bar-button" title="Plot a bar chart of the selected columns">Plot Bar</button>
-        <div id="bar-plot"></div>
-    </div>
-    <div>
-        <button id="heatmap-button" title="Plot a correlation heatmap">Correlation Heatmap</button>
-    </div>
+    
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    
+    <!-- Add Bootstrap JS and its dependencies -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    
     <!--Java Script for Plotly Plots-->
     <script>
         // Table Functions
@@ -125,84 +126,39 @@
                 document.getElementById("message").innerHTML = "";
             }
         }
-
-        // EDA Functions
-        window.onload = function() {
-
-            // Get the select elements
-            let column1Select = document.getElementById('column1-select');
-            let column2Select = document.getElementById('column2-select');
-
-            // Add event listener to column1 select element
-            column1Select.addEventListener('change', function() {
-                // Get the selected option of column1
-                let selectedOption = this.value;
-
-                // Loop through the options of column2
-                for(let i = 0; i < column2Select.options.length; i++) {
-                    let option = column2Select.options[i];
-
-                    // If the option is the same as the selected option of column1, disable it
-                    if(option.value === selectedOption) {
-                        option.disabled = true;
-                    } else {
-                        // Otherwise, enable it
-                        option.disabled = false;
-                    }
-                }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var plotButtons = document.querySelectorAll('.plot-button');
+            plotButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var plotType = this.getAttribute('data-plot-type');
+                    var columnSelect1 = document.getElementById(plotType + '-column-select1');
+                    var columnSelect2 = document.getElementById(plotType + '-column-select2');
+                    var column1 = columnSelect1.value;
+                    var column2 = columnSelect2.value;
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/plot', true);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.onload = function() {
+                        if (this.status >= 200 && this.status < 400) {
+                            var data = JSON.parse(this.response);
+                            Plotly.newPlot(plotType + '-plot', data);
+                        } else {
+                            console.error('Server responded with status code ' + this.status);
+                        }
+                    };
+                    xhr.onerror = function() {
+                        console.error('Request failed');
+                    };
+                    var payload = JSON.stringify({
+                        'column1': column1,
+                        'column2': column2,
+                        'plot_type': plotType
+                    });
+                    xhr.send(payload);
+                });
             });
-
-            function plot() {
-                // Get plot type from button ID
-                let plotType = this.id.split('-')[0]; 
-
-                // Get selected columns from dropdowns
-                let column1 = document.getElementById('column1-select').value;
-                let column2 = document.getElementById('column2-select').value;
-                // Determine div to update based on plot type
-                let plotDiv;
-                if (plotType === 'hist') {
-                    plotDiv = document.getElementById('hist-plot');
-                } else if (plotType === 'box') {
-                    plotDiv = document.getElementById('box-plot');
-                } else {
-                    plotDiv = document.getElementById('bar-plot');
-                }
-                
-                // Show loading indicator
-                plotDiv.innerHTML = 'Loading plot...';
-                // Call Flask endpoint
-                fetch('/plot', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        plot_type: plotType,
-                        columns: [column1, column2]
-                    })
-                })
-
-                // Handle response  
-                .then(response => response.json())
-                .then(data => {
-
-                    // Clear loading indicator
-                    plotDiv.innerHTML = '';
-                    // Create image element
-                    let img = document.createElement('img');
-                    img.src = 'data:image/png;base64,' + data.plot;
-                    // Display image
-                    plotDiv.appendChild(img);
-                })
-            };
-
-            // Histogram button
-            document.getElementById('hist-button').addEventListener('click', plot); 
-            // Boxplot button
-            document.getElementById('box-button').addEventListener('click', plot);
-            // Bar chart button
-            document.getElementById('bar-button').addEventListener('click', plot);
-        };
+        });
     </script>
 </body>
