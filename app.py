@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
@@ -38,6 +38,9 @@ def display():
             db_path = os.path.join(db_dir, db_name)
             engine = create_engine('sqlite:///' + db_path)
             df.to_sql(table_name, engine, if_exists='replace')
+            # Store the db_name and table_name in the session data
+            session['db_name'] = db_name
+            session['table_name'] = table_name
             return render_template('display.html', tables=[df.to_html(classes='data')], titles=df.columns.values)
         else:
             return "File type is incorrect. Please upload a .csv file."
@@ -54,36 +57,48 @@ def upload_file():
         return render_template('display.html', tables=[df.to_html(classes='data')], num_columns=num_columns, cat_columns=cat_columns)
     return redirect(url_for('index'))
 
+#-----------------------------------------------------------------Get Columns
+@app.route('/columns', methods=['GET'])
+def columns():
+    db_dir = './database'
+    db_name = session.get('db_name')  # Get database name from session data
+    table_name = session.get('table_name')  # Get table name from session data
+    db_path = os.path.join(db_dir, db_name)
+    engine = create_engine('sqlite:///' + db_path)
+    df = pd.read_sql_table(table_name, engine)
+    numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_columns = df.select_dtypes(include=[object]).columns.tolist()
+    return jsonify(numeric_columns=numeric_columns, categorical_columns=categorical_columns)
+
+
 #-----------------------------------------------------------------Plot Function (EDA)
-# Change to take data from database NOT FILE!!!!!!!
 @app.route('/plot', methods=['POST'])
 def plot():
     if request.is_json:
         # Proceed if the request data is in JSON format
         data = request.get_json()
         column1 = data['column1']
-        column2 = data['column2']
         plot_type = data['plot_type']
-        file = request.files['file']
         db_dir = './database'
-        db_name = os.path.splitext(file.filename)[0] + '_database.db'
-        table_name = os.path.splitext(file.filename)[0] + '_table'
+        db_name = session.get('db_name')  # Get database name from session data
+        table_name = session.get('table_name')  # Get table name from session data
         db_path = os.path.join(db_dir, db_name)
         engine = create_engine('sqlite:///' + db_path)
         df = pd.read_sql_table(table_name, engine)
         if plot_type == 'histogram':
-            data = [go.Histogram(x=df[column1], y=df[column2])]
+            data = [go.Histogram(x=df[column1])]
         elif plot_type == 'box':
-            data = [go.Box(y=df[column1], x=df[column2])]
+            data = [go.Box(y=df[column1])]
         elif plot_type == 'bar':
-            data = [go.Bar(x=df[column1].value_counts().index, y=df[column2].value_counts().values)]
+            data = [go.Bar(x=df[column1].value_counts().index, y=df[column1].value_counts().values)]
         elif plot_type == 'heatmap':
-            data = [go.Heatmap(z=df[[column1, column2]].corr().values, x=df[[column1, column2]].columns, y=df[[column1, column2]].columns, colorscale='Viridis')]
+            data = [go.Heatmap(z=df.corr().values, x=df.columns, y=df.columns, colorscale='Viridis')]
         graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
         return render_template('plot.html', graphJSON=graphJSON)
     else:
         # Return an error response if the request data is not in JSON format
         return jsonify({"error": "Invalid data format. Expected JSON."}), 400
+
 
 
 def allowed_file(filename):
