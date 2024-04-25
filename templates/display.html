@@ -88,7 +88,6 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     
     <!-- Add Bootstrap JS and its dependencies -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
     
@@ -147,14 +146,41 @@
     </script>
     <script>
         $(document).ready(function(){
-            var numericColumns = {{ numeric_columns|tojson }};
-            var categoricalColumns = {{ categorical_columns|tojson }};
-            numericColumns.forEach(function(column){
-                $("#histogram-column, #box-plot-column").append(new Option(column, column));
-            });
-            categoricalColumns.forEach(function(column){
-                $("#bar-plot-column1, #bar-plot-column2").append(new Option(column, column));
+            $.ajax({
+                url: '/jsonify_columns',
+                type: 'GET',
+                success: function(data) {
+                    var numericColumns = data.numeric_columns;
+                    var categoricalColumns = data.categorical_columns;
+                    numericColumns.forEach(function(column){
+                        $("#histogram-column, #box-plot-column").append(new Option(column, column));
+                    });
+                    categoricalColumns.forEach(function(column){
+                        $("#bar-plot-column1, #bar-plot-column2").append(new Option(column, column));
+                    });
+                }
             });
         });
+    </script>
+    <script>
+        function plot(plot_type) {
+            var column1 = $("#" + plot_type + "-column").val();
+            var data = {
+                'column1': column1,
+                'plot_type': plot_type
+            };
+            $.ajax({
+                type: "POST",
+                url: "/plot",
+                data: JSON.stringify(data),
+                contentType: "application/json",
+                success: function(response) {
+                    $("#" + plot_type + "-figure-display").html(response);
+                },
+                error: function(err) {
+                    console.log(err);
+                }
+            });
+        }
     </script>
 </body>

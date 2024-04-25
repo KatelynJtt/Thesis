@@ -7,74 +7,92 @@ import os
 import plotly
 import plotly.graph_objs as go
 import json
+import logging
+from logging.handlers import RotatingFileHandler
+
 
 app = Flask(__name__)
 
-from logging.handlers import RotatingFileHandler
+# Set the secret key for the session
+app.secret_key = 'your_secret_key'
+
+try:
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+except Exception as e:
+    print(f"An error occurred while trying to create the directory: {e}")
+
+#----------------------------------------------------Logging
+handler = RotatingFileHandler('logs\\app.log', maxBytes=10000, backupCount=10)
+handler.setLevel(logging.INFO)
+app.logger.addHandler(handler)
 
 #-------------------------------------------------------Log functions for debugging specifics
-@app.errorhandler(500)
-def internal_error(error):
-    app.logger.error('Server Error: %s', (error))
-    return "500 error", 500
-
 @app.errorhandler(Exception)
-def unhandled_exception(e):
+def handle_exception(e):
     app.logger.error('Unhandled Exception: %s', (e))
-    return "500 error", 500
+    return jsonify({'error': 'A server error occurred.', 'details': str(e)}), 500
+
+#---------------------------------------------------------------Get DF Function
+def get_data_and_columns(file):
+    db_dir = './database'
+    if not os.path.exists(db_dir):
+        os.makedirs(db_dir)
+    db_name = os.path.splitext(file.filename)[0] + '_database.db'
+    table_name = os.path.splitext(file.filename)[0] + '_table'
+    db_path = os.path.join(db_dir, db_name)
+    engine = create_engine('sqlite:///' + db_path)
+    df = pd.read_csv(file)
+    df.to_sql(table_name, engine, if_exists='replace')
+    session['db_name'] = db_name
+    session['table_name'] = table_name
+    numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_columns = df.select_dtypes(include=[object]).columns.tolist()
+    session['numeric_columns'] = numeric_columns
+    session['categorical_columns'] = categorical_columns
 
 #---------------------------------------------------Display Functions
 @app.route('/', methods=['GET', 'POST'])
 def display():
-    df = pd.DataFrame()  # Initialize df as an empty DataFrame
-    numeric_columns = []
-    categorical_columns = []
     if request.method == 'POST':
         file = request.files['file']
         if file and allowed_file(file.filename):
-            df = pd.read_csv(file)
-            db_dir = './database'
-            if not os.path.exists(db_dir):
-                os.makedirs(db_dir)
-            db_name = os.path.splitext(file.filename)[0] + '_database.db'
-            table_name = os.path.splitext(file.filename)[0] + '_table'
-            db_path = os.path.join(db_dir, db_name)
-            engine = create_engine('sqlite:///' + db_path)
-            df.to_sql(table_name, engine, if_exists='replace')
-            session['db_name'] = db_name
-            session['table_name'] = table_name
-            numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
-            categorical_columns = df.select_dtypes(include=[object]).columns.tolist()
-            return render_template('display.html', tables=[df.to_html(classes='data')], titles=df.columns.values, numeric_columns=numeric_columns, categorical_columns=categorical_columns)
+            get_data_and_columns(file)
+            df = pd.read_sql_table(session['table_name'], create_engine('sqlite:///' + os.path.join('./database', session['db_name'])))
+            return render_template('display.html', tables=[df.to_html(classes='data')], titles=df.columns.values, numeric_columns=session['numeric_columns'], categorical_columns=session['categorical_columns'])
         else:
             return "File type is incorrect. Please upload a .csv file."
-    elif 'db_name' in session and 'table_name' in session:
-        db_dir = './database'
-        db_name = session.get('db_name')  # Get database name from session data
-        table_name = session.get('table_name')  # Get table name from session data
-        db_path = os.path.join(db_dir, db_name)
-        engine = create_engine('sqlite:///' + db_path)
-        df = pd.read_sql_table(table_name, engine)
-        numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
-        categorical_columns = df.select_dtypes(include=[object]).columns.tolist()
-    return render_template('display.html', tables=[df.to_html(classes='data')], titles=df.columns.values, numeric_columns=numeric_columns, categorical_columns=categorical_columns)
+    else:
+        # When a GET request is made, clear the session and render the template without any tables or columns
+        session.clear()
+        return render_template('display.html')
 
 #------------------------------------------------------------------Upload Function
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    df = pd.DataFrame()  # Initialize df as an empty DataFrame
-    num_columns = []
-    cat_columns = []
     file = request.files['file']
-    if file:
-        df = pd.read_csv(file)
-        print(df.to_html(classes='data'))
-        num_columns = df.select_dtypes(include=np.number).columns.tolist()
-        cat_columns = df.select_dtypes(exclude=np.number).columns.tolist()
-        print(num_columns)  # Print the numeric columns
-        print(cat_columns)  # Print the categorical columns
-    return render_template('display.html', tables=[df.to_html(classes='data')], num_columns=num_columns, cat_columns=cat_columns)
-    
+    if file and allowed_file(file.filename):
+        get_data_and_columns(file)
+        db_path = os.path.join('./database', session['db_name'])
+        engine = create_engine('sqlite:///' + db_path)
+        df = pd.read_sql_table(session['table_name'], engine)
+        return render_template('display.html', tables=[df.to_html(classes='data')], numeric_columns=session['numeric_columns'], categorical_columns=session['categorical_columns'])
+    else:
+        return jsonify({'error': 'File type is incorrect. Please upload a .csv file.'}), 400
+        
+#-------------------------------------------------------------JSONify Columns Function
+# Define the '/jsonify_columns' endpoint
+@app.route('/jsonify_columns', methods=['GET'])
+def jsonify_columns():
+    db_dir = './database'
+    db_name = session.get('db_name')  # Get database name from session data
+    table_name = session.get('table_name')  # Get table name from session data
+    db_path = os.path.join(db_dir, db_name)
+    engine = create_engine('sqlite:///' + db_path)
+    df = pd.read_sql_table(table_name, engine)
+    numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_columns = df.select_dtypes(include=[object]).columns.tolist()
+    return jsonify(numeric_columns=numeric_columns, categorical_columns=categorical_columns)
 
 #-----------------------------------------------------------------Plot Function (EDA)
 @app.route('/plot', methods=['POST'])
