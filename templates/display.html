@@ -46,18 +46,34 @@
         </ul>
         <div class="tab-content" id="eda_functions_content">
             <div class="tab-pane fade show active" id="histogram">
-                <select id="histogram-column"></select>
+                <select id="histogram-column">
+                {% for column in numeric_columns %}
+                    <option value="{{ column }}">{{ column }}</option>
+                {% endfor %}
+                </select>
                 <button onclick="plot('histogram')" id="create-histogram">Create Histogram</button>
                 <div id="histogram-figure-display"></div>
             </div>
             <div class="tab-pane fade" id="box-plot">
-                <select id="box-plot-column"></select>
+                <select id="box-plot-column">
+                {% for column in numeric_columns %}
+                    <option value="{{ column }}">{{ column }}</option>
+                {% endfor %}
+                </select>
                 <button onclick="plot('box')" id="create-box-plot">Create Box Plot</button>
                 <div id="box-plot-figure-display"></div>
             </div>
             <div class="tab-pane fade" id="bar-plot">
-                <select id="bar-plot-column1"></select>
-                <select id="bar-plot-column2"></select>
+                <select id="bar-plot-column1">
+                {% for column in categorical_columns %}
+                    <option value="{{ column }}">{{ column }}</option>
+                {% endfor %}
+                </select>
+                <select id="bar-plot-column2">
+                {% for column in categorical_columns %}
+                    <option value="{{ column }}">{{ column }}</option>
+                {% endfor %}
+                </select>
                 <button onclick="plot('bar')" title="create-bar-plot">Create Bar Plot</button>
                 <div id="bar-plot-figure-display"></div>
             </div>
@@ -131,15 +147,13 @@
     </script>
     <script>
         $(document).ready(function(){
-            $.get("/columns", function(data){
-                var numericColumns = data.numeric_columns;
-                var categoricalColumns = data.categorical_columns;
-                numericColumns.forEach(function(column){
-                    $("#histogram-column, #box-plot-column").append(new Option(column, column));
-                });
-                categoricalColumns.forEach(function(column){
-                    $("#bar-plot-column1, #bar-plot-column2").append(new Option(column, column));
-                });
+            var numericColumns = {{ numeric_columns|tojson }};
+            var categoricalColumns = {{ categorical_columns|tojson }};
+            numericColumns.forEach(function(column){
+                $("#histogram-column, #box-plot-column").append(new Option(column, column));
+            });
+            categoricalColumns.forEach(function(column){
+                $("#bar-plot-column1, #bar-plot-column2").append(new Option(column, column));
             });
         });
     </script>

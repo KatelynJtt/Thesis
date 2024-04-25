@@ -26,6 +26,9 @@ def unhandled_exception(e):
 #---------------------------------------------------Display Functions
 @app.route('/', methods=['GET', 'POST'])
 def display():
+    df = pd.DataFrame()  # Initialize df as an empty DataFrame
+    numeric_columns = []
+    categorical_columns = []
     if request.method == 'POST':
         file = request.files['file']
         if file and allowed_file(file.filename):
@@ -38,38 +41,40 @@ def display():
             db_path = os.path.join(db_dir, db_name)
             engine = create_engine('sqlite:///' + db_path)
             df.to_sql(table_name, engine, if_exists='replace')
-            # Store the db_name and table_name in the session data
             session['db_name'] = db_name
             session['table_name'] = table_name
-            return render_template('display.html', tables=[df.to_html(classes='data')], titles=df.columns.values)
+            numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+            categorical_columns = df.select_dtypes(include=[object]).columns.tolist()
+            return render_template('display.html', tables=[df.to_html(classes='data')], titles=df.columns.values, numeric_columns=numeric_columns, categorical_columns=categorical_columns)
         else:
             return "File type is incorrect. Please upload a .csv file."
-    return render_template('display.html')
+    elif 'db_name' in session and 'table_name' in session:
+        db_dir = './database'
+        db_name = session.get('db_name')  # Get database name from session data
+        table_name = session.get('table_name')  # Get table name from session data
+        db_path = os.path.join(db_dir, db_name)
+        engine = create_engine('sqlite:///' + db_path)
+        df = pd.read_sql_table(table_name, engine)
+        numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+        categorical_columns = df.select_dtypes(include=[object]).columns.tolist()
+    return render_template('display.html', tables=[df.to_html(classes='data')], titles=df.columns.values, numeric_columns=numeric_columns, categorical_columns=categorical_columns)
 
 #------------------------------------------------------------------Upload Function
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    df = pd.DataFrame()  # Initialize df as an empty DataFrame
+    num_columns = []
+    cat_columns = []
     file = request.files['file']
     if file:
         df = pd.read_csv(file)
+        print(df.to_html(classes='data'))
         num_columns = df.select_dtypes(include=np.number).columns.tolist()
         cat_columns = df.select_dtypes(exclude=np.number).columns.tolist()
-        return render_template('display.html', tables=[df.to_html(classes='data')], num_columns=num_columns, cat_columns=cat_columns)
-    return redirect(url_for('index'))
-
-#-----------------------------------------------------------------Get Columns
-@app.route('/columns', methods=['GET'])
-def columns():
-    db_dir = './database'
-    db_name = session.get('db_name')  # Get database name from session data
-    table_name = session.get('table_name')  # Get table name from session data
-    db_path = os.path.join(db_dir, db_name)
-    engine = create_engine('sqlite:///' + db_path)
-    df = pd.read_sql_table(table_name, engine)
-    numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
-    categorical_columns = df.select_dtypes(include=[object]).columns.tolist()
-    return jsonify(numeric_columns=numeric_columns, categorical_columns=categorical_columns)
-
+        print(num_columns)  # Print the numeric columns
+        print(cat_columns)  # Print the categorical columns
+    return render_template('display.html', tables=[df.to_html(classes='data')], num_columns=num_columns, cat_columns=cat_columns)
+    
 
 #-----------------------------------------------------------------Plot Function (EDA)
 @app.route('/plot', methods=['POST'])
