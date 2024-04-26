@@ -96,6 +96,7 @@ def jsonify_columns():
     numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
     categorical_columns = df.select_dtypes(include=[object]).columns.tolist()
     return jsonify(numeric_columns=numeric_columns, categorical_columns=categorical_columns)
+
 #-----------------------------------------------------------------Plot Function (EDA)
 @app.route('/plot', methods=['POST'])
 def plot():
@@ -120,8 +121,10 @@ def plot():
             columns = df.columns.tolist()
         else:
             columns = [column1, column2]
-        if plot_type == 'histogram' or plot_type == 'box':
+        if plot_type == 'histogram':
             data = [go.Histogram(x=df[columns[0]])]
+        elif plot_type == 'box':
+            data = [go.Box(y=df[columns[0]])]
         elif plot_type == 'bar':
             data = [go.Bar(x=df[columns[0]].value_counts().index, y=df[columns[1]].value_counts().values)]
         elif plot_type == 'heatmap':
@@ -134,6 +137,7 @@ def plot():
         # Return an error response if the request data is not in JSON format
         return jsonify({"error": "Invalid data format. Expected JSON."}), 400
 
+#-------------------------------------------------------------Profile / Encode Data Function
 def profile_categorical_data(df):
     """ 
     Profiles cat columns in panda dataframe to determine if they 
