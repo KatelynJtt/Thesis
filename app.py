@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import os
 import plotly
 import plotly.graph_objs as go
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 import json
 import logging
 from logging.handlers import RotatingFileHandler
@@ -87,20 +88,27 @@ def jsonify_columns():
     db_dir = './database'
     db_name = session.get('db_name')  # Get database name from session data
     table_name = session.get('table_name')  # Get table name from session data
+    if db_name is None or table_name is None:
+        return jsonify(numeric_columns=[], categorical_columns=[])
     db_path = os.path.join(db_dir, db_name)
     engine = create_engine('sqlite:///' + db_path)
     df = pd.read_sql_table(table_name, engine)
     numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
     categorical_columns = df.select_dtypes(include=[object]).columns.tolist()
     return jsonify(numeric_columns=numeric_columns, categorical_columns=categorical_columns)
-
 #-----------------------------------------------------------------Plot Function (EDA)
 @app.route('/plot', methods=['POST'])
 def plot():
+    print(request.get_json())
     if request.is_json:
         # Proceed if the request data is in JSON format
         data = request.get_json()
+        # Check if 'column1' is in the request data
+        if 'column1' not in data:
+            return jsonify({"error": "Missing 'column1' in request data."}), 400
         column1 = data['column1']
+        print(column1)
+        column2 = data.get('column2')  # Use .get() to avoid KeyError if 'column2' is not in data
         plot_type = data['plot_type']
         db_dir = './database'
         db_name = session.get('db_name')  # Get database name from session data
@@ -108,20 +116,71 @@ def plot():
         db_path = os.path.join(db_dir, db_name)
         engine = create_engine('sqlite:///' + db_path)
         df = pd.read_sql_table(table_name, engine)
-        if plot_type == 'histogram':
-            data = [go.Histogram(x=df[column1])]
-        elif plot_type == 'box':
-            data = [go.Box(y=df[column1])]
+        if column1 == 'ALL':
+            columns = df.columns.tolist()
+        else:
+            columns = [column1, column2]
+        if plot_type == 'histogram' or plot_type == 'box':
+            data = [go.Histogram(x=df[columns[0]])]
         elif plot_type == 'bar':
-            data = [go.Bar(x=df[column1].value_counts().index, y=df[column1].value_counts().values)]
+            data = [go.Bar(x=df[columns[0]].value_counts().index, y=df[columns[1]].value_counts().values)]
         elif plot_type == 'heatmap':
             data = [go.Heatmap(z=df.corr().values, x=df.columns, y=df.columns, colorscale='Viridis')]
         graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
-        return render_template('plot.html', graphJSON=graphJSON)
+        # Return the graphJSON data as a JSON response
+        return jsonify({'graphJSON': graphJSON})
+        
     else:
         # Return an error response if the request data is not in JSON format
         return jsonify({"error": "Invalid data format. Expected JSON."}), 400
 
+def profile_categorical_data(df):
+    """ 
+    Profiles cat columns in panda dataframe to determine if they 
+    should be one-hot encoded (nominal) or label encoded (ordinal) 
+    """
+    profile = {}
+    for column in df.select_dtypes(include=['object', 'category', 'int']).columns:
+        unique_values = df[column].dropna.unique()
+        unique_values_count = len(unique_values)
+        # Check if unique values have natural ordering
+        if pd.api.types.is_integer_dtype(df[column]):
+            # Assume ordinal if integers and range matches count of unique values
+            if unique_values_count == df[column].max() - df[column].min() + 1:
+                profile[column] = 'ordinal'
+            else:
+                profile[column] = 'nominal'
+        elif pd.api.types.is_string_dtype(df[column]) or pd.api.types.is_categorical_dtype(df[column]):
+            # Check if column can be converted to a numeric type (simple heuristic for ordinal)
+            try:
+                pd.to_numeric(df[column], errors='raise')
+                profile[column] = 'ordinal'
+            except ValueError:
+                profile[column] = 'nominal'
+        else:
+            # Default to nominal if no clear ordinal pattern is detected
+            profile[column] = 'nominal'
+    return profile
+
+
+def smart_encode(df, profile):
+    le = LabelEncoder()
+    """ Encodes columns in dataframe based on the column profile """
+    encoder_dict = {}
+    for column, col_type in profile.items():
+        if col_type == 'nominal':
+            encoder = OneHotEncoder(sparse=False)
+            transformed = encoder.fit_transform(df[[column]])
+            # Create a dataframe with encoded columns
+            cols = [f"{column}_{cat}" for cat in encoder.categories_[0]]
+            encoded_df = pd.DataFrame(transformed, columns=cols)
+            df = pd.concat([df.drop(column, axis=1), encoded_df], axis=1)
+            encoder_dict[column] = encoder
+        elif col_type == 'ordinal':
+            encoder = LabelEncoder()
+            df[column] = encoder.fit_transform(df[column])
+            encoder_dict[column] = encoder
+    return df, encoder_dict
 
 
 def allowed_file(filename):

@@ -55,27 +55,27 @@
                 <div id="histogram-figure-display"></div>
             </div>
             <div class="tab-pane fade" id="box-plot">
-                <select id="box-plot-column">
+                <select id="box-column">
                 {% for column in numeric_columns %}
                     <option value="{{ column }}">{{ column }}</option>
                 {% endfor %}
                 </select>
                 <button onclick="plot('box')" id="create-box-plot">Create Box Plot</button>
-                <div id="box-plot-figure-display"></div>
+                <div id="box-figure-display"></div>
             </div>
             <div class="tab-pane fade" id="bar-plot">
-                <select id="bar-plot-column1">
+                <select id="bar-column1">
                 {% for column in categorical_columns %}
                     <option value="{{ column }}">{{ column }}</option>
                 {% endfor %}
                 </select>
-                <select id="bar-plot-column2">
+                <select id="bar-column2">
                 {% for column in categorical_columns %}
                     <option value="{{ column }}">{{ column }}</option>
                 {% endfor %}
                 </select>
                 <button onclick="plot('bar')" title="create-bar-plot">Create Bar Plot</button>
-                <div id="bar-plot-figure-display"></div>
+                <div id="bar-figure-display"></div>
             </div>
             <div class="tab-pane fade" id="correlation-heatmap">
                 <button onclick="plot('heatmap')" id="create-correlation-heatmap">Create Correlation Heatmap</button>
@@ -164,18 +164,34 @@
     </script>
     <script>
         function plot(plot_type) {
-            var column1 = $("#" + plot_type + "-column").val();
+            var column1, column2;
+            if (plot_type === 'histogram' || plot_type === 'box') {
+                column1 = $("#" + plot_type + "-column").val();
+            } else if (plot_type === 'heatmap') {
+                column1 = 'ALL';
+            } else {
+                column1 = $("#" + plot_type + "-column1").val();
+                console.log(column1);
+                column2 = $("#" + plot_type + "-column2").val();
+            }
             var data = {
                 'column1': column1,
                 'plot_type': plot_type
             };
+            if (column2) {
+                data['column2'] = column2;
+            }
             $.ajax({
                 type: "POST",
                 url: "/plot",
                 data: JSON.stringify(data),
                 contentType: "application/json",
                 success: function(response) {
-                    $("#" + plot_type + "-figure-display").html(response);
+                    var graphJSON = response.graphJSON;
+                    // Parse the graphJSON string back into an object
+                    var graphData = JSON.parse(graphJSON);
+                    // Use the graphData to create a new Plotly plot
+                    Plotly.newPlot(plot_type + '-figure-display', graphData);                
                 },
                 error: function(err) {
                     console.log(err);
