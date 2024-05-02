@@ -117,8 +117,11 @@ def plot():
         db_path = os.path.join(db_dir, db_name)
         engine = create_engine('sqlite:///' + db_path)
         df = pd.read_sql_table(table_name, engine)
+        # Profile and encode dataframe
+        profile = profile_categorical_data(df)
+        df_encoded, encoder_dict = smart_encode(df, profile)
         if column1 == 'ALL':
-            columns = df.columns.tolist()
+            columns = df_encoded.columns.tolist()
         else:
             columns = [column1, column2]
         if plot_type == 'histogram':
@@ -128,7 +131,7 @@ def plot():
         elif plot_type == 'bar':
             data = [go.Bar(x=df[columns[0]].value_counts().index, y=df[columns[1]].value_counts().values)]
         elif plot_type == 'heatmap':
-            data = [go.Heatmap(z=df.corr().values, x=df.columns, y=df.columns, colorscale='Viridis')]
+            data = [go.Heatmap(z=df_encoded[columns].corr().values, x=columns, y=columns, colorscale='Viridis')]
         graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
         # Return the graphJSON data as a JSON response
         return jsonify({'graphJSON': graphJSON})
@@ -145,7 +148,7 @@ def profile_categorical_data(df):
     """
     profile = {}
     for column in df.select_dtypes(include=['object', 'category', 'int']).columns:
-        unique_values = df[column].dropna.unique()
+        unique_values = df[column].dropna().unique()
         unique_values_count = len(unique_values)
         # Check if unique values have natural ordering
         if pd.api.types.is_integer_dtype(df[column]):
@@ -173,8 +176,8 @@ def smart_encode(df, profile):
     encoder_dict = {}
     for column, col_type in profile.items():
         if col_type == 'nominal':
-            encoder = OneHotEncoder(sparse=False)
-            transformed = encoder.fit_transform(df[[column]])
+            encoder = OneHotEncoder()
+            transformed = encoder.fit_transform(df[[column]]).toarray()
             # Create a dataframe with encoded columns
             cols = [f"{column}_{cat}" for cat in encoder.categories_[0]]
             encoded_df = pd.DataFrame(transformed, columns=cols)

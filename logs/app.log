@@ -22,3 +22,5 @@ Unhandled Exception: plot.html
 Unhandled Exception: plot.html
 Unhandled Exception: could not convert string to float: 'Big Island Hawaii'
 Unhandled Exception: could not convert string to float: 'Big Island Hawaii'
+Unhandled Exception: could not convert string to float: 'Big Island Hawaii'
+Unhandled Exception: 'function' object has no attribute 'unique'
