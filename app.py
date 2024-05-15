@@ -28,11 +28,40 @@ handler = RotatingFileHandler('logs\\app.log', maxBytes=10000, backupCount=10)
 handler.setLevel(logging.INFO)
 app.logger.addHandler(handler)
 
-#-------------------------------------------------------Log functions for debugging specifics
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+#-------------------------------------------------------Load HTML tabs
 @app.errorhandler(Exception)
 def handle_exception(e):
-    app.logger.error('Unhandled Exception: %s', (e))
+    app.logger.error('%s', (e))
     return jsonify({'error': 'A server error occurred.', 'details': str(e)}), 500
+
+@app.route('/datasummary')
+def data_summary():
+    # Render the data_summary.html template or generate the HTML content dynamically
+    return render_template('data_summary.html')
+
+@app.route('/dataanalysis')
+def data_analysis():
+    # Render the data_analysis.html template or generate the HTML content dynamically
+    return render_template('data_analysis.html')
+
+@app.route('/geoimaging')
+def geo_imaging():
+    # Render the geo_imaging.html template or generate the HTML content dynamically
+    return render_template('geo_imaging.html')
+
+@app.route('/machinelearning')
+def machine_learning():
+    # Render the machine_learning.html template or generate the HTML content dynamically
+    return render_template('machine_learning.html')
+
+@app.route('/trainedmodels')
+def trained_models():
+    # Render the trained_models.html template or generate the HTML content dynamically
+    return render_template('trained_models.html')
 
 #---------------------------------------------------------------Get DF Function
 def get_data_and_columns(file):
@@ -53,20 +82,20 @@ def get_data_and_columns(file):
     session['categorical_columns'] = categorical_columns
 
 #---------------------------------------------------Display Functions
-@app.route('/', methods=['GET', 'POST'])
-def display():
+@app.route('/table_display', methods=['GET', 'POST'])
+def table_display():
     if request.method == 'POST':
         file = request.files['file']
         if file and allowed_file(file.filename):
             get_data_and_columns(file)
             df = pd.read_sql_table(session['table_name'], create_engine('sqlite:///' + os.path.join('./database', session['db_name'])))
-            return render_template('display.html', tables=[df.to_html(classes='data')], titles=df.columns.values, numeric_columns=session['numeric_columns'], categorical_columns=session['categorical_columns'])
+            return render_template('data_summary.html', tables=[df.to_html(classes='data')], titles=df.columns.values, numeric_columns=session['numeric_columns'], categorical_columns=session['categorical_columns'])
         else:
             return "File type is incorrect. Please upload a .csv file."
     else:
         # When a GET request is made, clear the session and render the template without any tables or columns
         session.clear()
-        return render_template('display.html')
+        return render_template('data_summary.html')
 
 #------------------------------------------------------------------Upload Function
 @app.route('/upload', methods=['POST'])
@@ -77,7 +106,7 @@ def upload_file():
         db_path = os.path.join('./database', session['db_name'])
         engine = create_engine('sqlite:///' + db_path)
         df = pd.read_sql_table(session['table_name'], engine)
-        return render_template('display.html', tables=[df.to_html(classes='data')], numeric_columns=session['numeric_columns'], categorical_columns=session['categorical_columns'])
+        return render_template('data_summary.html', tables=[df.to_html(classes='data')], numeric_columns=session['numeric_columns'], categorical_columns=session['categorical_columns'])
     else:
         return jsonify({'error': 'File type is incorrect. Please upload a .csv file.'}), 400
         

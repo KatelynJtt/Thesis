@@ -1,62 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Home</title>
-  
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta charset="UTF-8">
+    <title>Data Display and Plot</title>
+    <style>
+        /* Tab styling */
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+        }
 
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <!-- defer: Tell browser to continue parsing HTML while script downloads and wait until HTML is fully parsed to execute script -->
-  <!-- Wait to execute script b/c it references elements in the HTML -->
-  <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+        }
 
+        .tab button:hover {
+            background-color: #ddd;
+        }
+
+        .tab button.active {
+            background-color: #ccc;
+        }
+
+        .tabcontent {
+            display: none;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-top: none;
+        }
+    </style>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
 </head>
-
 <body>
-
-  <h1>Explore Data Analysis</h1>
-  
-  <div>
-    <form id="fileForm">
-      <label>Upload CSV file:</label>
-      <!-- File input -->
-      <input type="file" id="fileInput">
-      <!-- Button to trigger upload -->
-      <!-- set button type as submit and then listen for submit event is js -->
-      <button id="uploadButton" type="submit">Upload</button>
-      <p id="uploadMessage"></p>
-      <div id="loadingIndicator" style="display: none;">Uploading...</div>
+    <div class="tab">
+        <button class="tablinks" onclick="openTab(event, 'DataSummary')" id="defaultOpen">Data Summary</button>
+        <button class="tablinks" onclick="openTab(event, 'DataAnalysis')">Data Analysis</button>
+        <button class="tablinks" onclick="openTab(event, 'GeoImaging')">Geo Imaging</button>
+        <button class="tablinks" onclick="openTab(event, 'MachineLearning')">Machine Learning</button>
+        <button class="tablinks" onclick="openTab(event, 'TrainedModels')">Trained Models</button>    
+    </div>
+    
+        <h1>Upload CSV File</h1>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="submit" value="Upload">
     </form>
-  </div>
-  <!-- Display uploaded data -->
-  <div id="dataset"></div>
+    
+    <div id="tab-content"></div>
 
-  <div id="summary"></div>
+    <!-- Include JavaScript files and functions -->
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            evt.currentTarget.className += " active";
 
-  <div id="plots">
+            // Load the content using AJAX
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("tab-content").innerHTML = this.responseText;
+                }
+            };
+            xhr.open("GET", "/" + tabName.toLowerCase(), true);
+            xhr.send();        
+        }
 
-    <div id="univariate">
-      <label>Univariate Analysis:</label>
-      <select id="variableSelect"></select>
-      <button onclick="plotUnivariate()">Plot</button>
-      <div id="univariatePlot"></div>
-    </div>
+        // Get the element with id="defaultOpen" and click on it
+        document.getElementById("defaultOpen").click();
+    </script>
 
-    <div id="bivariate">
-      <label>Bivariate Analysis:</label>
-      <select multiple id="bioSelect"></select>
-      <button onclick="plotBivariate()">Plot</button>
-      <div id="bivariatePlot"></div>
-    </div>
-
-    <div id="multivariate">
-      <label>Multivariate Analysis:</label>
-      <select multiple id="multiSelect"></select>
-      <button onclick="plotMultivariate()">Plot</button>
-      <div id="multivariatePlot"></div>
-    </div>
-
-  </div>
-
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    
+    <!-- Add Bootstrap JS and its dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    
 </body>
 </html>
