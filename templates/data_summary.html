@@ -1,61 +1,11 @@
-<h1>Data Display</h1>
+<h2>Data Summary</h2>
     <p id="message"></p>
-    <button onclick="toggleTable()" title="Show/hide the data table">Toggle Table</button>
-    <button onclick="downloadTable()" title="Download the data table as a CSV file">Download Table</button>
-    <button onclick="clearTable()" title="Clear the data table">Clear Table</button>
-    <div id="dataTable">
-        {{ tables[0]|safe if tables else 'No tables' }}
-    </div>
-    <!--Java Script for Plotly Plots-->
-    <script>
-        // Table Functions
-        function toggleTable() {
-            var table = document.getElementById("dataTable");
-            if (table.innerHTML.trim() == "") {
-                document.getElementById("message").innerHTML = "No table to toggle.";
-            } else {
-                if (table.style.display === "none") {
-                    table.style.display = "block";
-                } else {
-                    table.style.display = "none";
-                }
-                document.getElementById("message").innerHTML = "";
-            }
-        }
-
-        function clearTable() {
-            var table = document.getElementById("dataTable");
-            if (table.innerHTML.trim() == "") {
-                document.getElementById("message").innerHTML = "No table to clear.";
-            } else {
-                table.innerHTML = "";
-                document.getElementById("message").innerHTML = "";
-            }
-        }
-
-        function downloadTable() {
-            var table = document.getElementById("dataTable");
-            if (table.innerHTML.trim() == "") {
-                document.getElementById("message").innerHTML = "No table to download.";
-            } else {
-                var csv = [];
-                var rows = table.getElementsByTagName("tr");
-
-                for (var i = 0; i < rows.length; i++) {
-                    var row = [], cols = rows[i].querySelectorAll("td, th");
-                    for (var j = 0; j < cols.length; j++)
-                        row.push(cols[j].innerText);
-                    csv.push(row.join(","));
-                }
-
-                var csvData = new Blob([csv.join("\n")], { type: 'text/csv' });
-                var csvUrl = URL.createObjectURL(csvData);
-                var hiddenElement = document.createElement('a');
-                hiddenElement.href = csvUrl;
-                hiddenElement.target = '_blank';
-                hiddenElement.download = 'table.csv';
-                hiddenElement.click();
-                document.getElementById("message").innerHTML = "";
-            }
-        }
-    </script>
+<button onclick="toggleTable()" title="Show/hide the data table">Toggle Table</button>
+<button onclick="downloadTable()" title="Download the data table as a CSV file">Download Table</button>
+<button onclick="clearTable()" title="Clear the data table">Clear Table</button>
+<div id="dataTable">
+    {{ tables[0]|safe if tables else 'No tables' }}
+</div>
+<!--Java Script for Plotly Plots-->
+<!--Table functions moved to static/js/table_functions.js-->
+<script src="{{ url_for('static', filename='js/table_functions.js') }}"></script>

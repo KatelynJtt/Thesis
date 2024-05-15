@@ -40,7 +40,8 @@
 </head>
 <body>
     <div class="tab">
-        <button class="tablinks" onclick="openTab(event, 'DataSummary')" id="defaultOpen">Data Summary</button>
+        <button class="tablinks" onclick="openTab(event, 'Home')" id="defaultOpen">Home</button>
+        <button class="tablinks" onclick="openTab(event, 'DataSummary')">Data Summary</button>
         <button class="tablinks" onclick="openTab(event, 'DataAnalysis')">Data Analysis</button>
         <button class="tablinks" onclick="openTab(event, 'GeoImaging')">Geo Imaging</button>
         <button class="tablinks" onclick="openTab(event, 'MachineLearning')">Machine Learning</button>
@@ -52,10 +53,21 @@
         <input type="file" name="file">
         <input type="submit" value="Upload">
     </form>
+
+    {% if success_message %}
+    <div class="alert alert-success" role="alert">
+        {{ success_message }}
+    </div>
+    {% elif error_message %}
+    <div class="alert alert-danger" role="alert">
+        {{ error_message }}
+    </div>
+    {% endif %}
     
     <div id="tab-content"></div>
 
     <!-- Include JavaScript files and functions -->
+    <script src="{{ url_for('static', filename='js/table_functions.js') }}"></script>
     <script>
         function openTab(evt, tabName) {
             var i, tabcontent, tablinks;
