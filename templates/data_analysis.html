@@ -1,110 +1,76 @@
-<h2>Exploratory Data Analysis</h2>
-<div id="eda_functions" class="container">
-    <ul class="nav nav-tabs">
-        <li class="nav-item">
-            <a class="nav-link active" id="histogram-tab" data-toggle="tab" href="#histogram">Histogram</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="box-tab" data-toggle="tab" href="#box-plot">Box Plot</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="bar-plot-tab" data-toggle="tab" href="#bar-plot">Bar Plot</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="correlation-heatmap-tab" data-toggle="tab" href="#correlation-heatmap">Correlation Heatmap</a>
-        </li>
-    </ul>
-    <div class="tab-content" id="eda_functions_content">
-        <div class="tab-pane fade show active" id="histogram">
-            <select id="histogram-column">
-            {% for column in numeric_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-            </select>
-            <button onclick="plot('histogram')" id="create-histogram">Create Histogram</button>
-            <div id="histogram-figure-display"></div>
+<html>
+    <body>
+        <h2>Exploratory Data Analysis</h2>
+        <div id="eda_functions" class="container">
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <a class="nav-link active" id="histogram-tab" data-toggle="tab" href="#histogram">Histogram</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="box-tab" data-toggle="tab" href="#box-plot">Box Plot</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="bar-plot-tab" data-toggle="tab" href="#bar-plot">Bar Plot</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="correlation-heatmap-tab" data-toggle="tab" href="#correlation-heatmap">Correlation Heatmap</a>
+                </li>
+            </ul>
+            <div class="tab-content" id="eda_functions_content">
+                <div class="tab-pane fade show active" id="histogram">
+                    <select id="histogram-column">
+                    {% for column in numeric_columns %}
+                        <option value="{{ column }}">{{ column }}</option>
+                    {% endfor %}
+                    </select>
+                    <button onclick="plot('histogram')" id="create-histogram">Create Histogram</button>
+                    <div id="histogram-figure-display"></div>
+                </div>
+                <div class="tab-pane fade" id="box-plot">
+                    <select id="box-column">
+                    {% for column in numeric_columns %}
+                        <option value="{{ column }}">{{ column }}</option>
+                    {% endfor %}
+                    </select>
+                    <button onclick="plot('box')" id="create-box-plot">Create Box Plot</button>
+                    <div id="box-figure-display"></div>
+                </div>
+                <div class="tab-pane fade" id="bar-plot">
+                    <select id="bar-column1">
+                    {% for column in categorical_columns %}
+                        <option value="{{ column }}">{{ column }}</option>
+                    {% endfor %}
+                    </select>
+                    <select id="bar-column2">
+                    {% for column in categorical_columns %}
+                        <option value="{{ column }}">{{ column }}</option>
+                    {% endfor %}
+                    </select>
+                    <button onclick="plot('bar')" title="create-bar-plot">Create Bar Plot</button>
+                    <div id="bar-figure-display"></div>
+                </div>
+                <div class="tab-pane fade" id="correlation-heatmap">
+                    <button onclick="plot('heatmap')" id="create-correlation-heatmap">Create Correlation Heatmap</button>
+                    <div id="heatmap-figure-display"></div>
+                </div>
+            </div>
         </div>
-        <div class="tab-pane fade" id="box-plot">
-            <select id="box-column">
-            {% for column in numeric_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-            </select>
-            <button onclick="plot('box')" id="create-box-plot">Create Box Plot</button>
-            <div id="box-figure-display"></div>
-        </div>
-        <div class="tab-pane fade" id="bar-plot">
-            <select id="bar-column1">
-            {% for column in categorical_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-            </select>
-            <select id="bar-column2">
-            {% for column in categorical_columns %}
-                <option value="{{ column }}">{{ column }}</option>
-            {% endfor %}
-            </select>
-            <button onclick="plot('bar')" title="create-bar-plot">Create Bar Plot</button>
-            <div id="bar-figure-display"></div>
-        </div>
-        <div class="tab-pane fade" id="correlation-heatmap">
-            <button onclick="plot('heatmap')" id="create-correlation-heatmap">Create Correlation Heatmap</button>
-            <div id="heatmap-figure-display"></div>
-        </div>
-    </div>
-</div>
-<script>
-    $(document).ready(function(){
-        $.ajax({
-            url: '/jsonify_columns',
-            type: 'GET',
-            success: function(data) {
-                var numericColumns = data.numeric_columns;
-                var categoricalColumns = data.categorical_columns;
-                numericColumns.forEach(function(column){
-                    $("#histogram-column, #box-plot-column").append(new Option(column, column));
+
+        <script>
+            $(document).ready(function() {
+                var numericColumns = JSON.parse('{{ numeric_columns|tojson|safe }}');
+                var categoricalColumns = JSON.parse('{{ categorical_columns|tojson|safe }}');
+
+                numericColumns.forEach(function(column) {
+                    $("#histogram-column, #box-column").append(new Option(column, column));
                 });
-                categoricalColumns.forEach(function(column){
-                    $("#bar-plot-column1, #bar-plot-column2").append(new Option(column, column));
+
+                categoricalColumns.forEach(function(column) {
+                    $("#bar-column1, #bar-column2").append(new Option(column, column));
                 });
-            }
-        });
-    });
-</script>
-<script>
-    function plot(plot_type) {
-        var column1, column2;
-        if (plot_type === 'histogram' || plot_type === 'box') {
-            column1 = $("#" + plot_type + "-column").val();
-        } else if (plot_type === 'heatmap') {
-            column1 = 'ALL';
-        } else {
-            column1 = $("#" + plot_type + "-column1").val();
-            console.log(column1);
-            column2 = $("#" + plot_type + "-column2").val();
-        }
-        var data = {
-            'column1': column1,
-            'plot_type': plot_type
-        };
-        if (column2) {
-            data['column2'] = column2;
-        }
-        $.ajax({
-            type: "POST",
-            url: "/plot",
-            data: JSON.stringify(data),
-            contentType: "application/json",
-            success: function(response) {
-                var graphJSON = response.graphJSON;
-                // Parse the graphJSON string back into an object
-                var graphData = JSON.parse(graphJSON);
-                // Use the graphData to create a new Plotly plot
-                Plotly.newPlot(plot_type + '-figure-display', graphData);                
-            },
-            error: function(err) {
-                console.log(err);
-            }
-        });
-    }
-</script>
+            });
+        </script>
+        <!-- Other scripts -->
+        <script src="{{ url_for('static', filename='js/plot.js') }}"></script>
+    </body>
+</html>

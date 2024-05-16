@@ -60,8 +60,15 @@ def data_summary():
 
 @app.route('/dataanalysis')
 def data_analysis():
-    # Render the data_analysis.html template or generate the HTML content dynamically
-    return render_template('data_analysis.html')
+    db_name = session.get('db_name')
+    table_name = session.get('table_name')
+    numeric_columns = session.get('numeric_columns', [])
+    categorical_columns = session.get('categorical_columns', [])
+
+    if db_name and table_name:
+        return render_template('data_analysis.html', numeric_columns=numeric_columns, categorical_columns=categorical_columns)
+    else:
+        return render_template('data_analysis.html')
 
 @app.route('/geoimaging')
 def geo_imaging():

@@ -40,7 +40,7 @@
 </head>
 <body>
     <div class="tab">
-        <button class="tablinks" onclick="openTab(event, 'Home')" id="defaultOpen">Home</button>
+        <button class="tablinks" onclick="openTab(event, 'Home')">Home</button>
         <button class="tablinks" onclick="openTab(event, 'DataSummary')">Data Summary</button>
         <button class="tablinks" onclick="openTab(event, 'DataAnalysis')">Data Analysis</button>
         <button class="tablinks" onclick="openTab(event, 'GeoImaging')">Geo Imaging</button>
@@ -68,6 +68,10 @@
 
     <!-- Include JavaScript files and functions -->
     <script src="{{ url_for('static', filename='js/table_functions.js') }}"></script>
+    <!-- Other scripts -->
+    <script src="{{ url_for('static', filename='js/plot.js') }}"></script>
+
+
     <script>
         function openTab(evt, tabName) {
             var i, tabcontent, tablinks;
@@ -79,7 +83,11 @@
             for (i = 0; i < tablinks.length; i++) {
                 tablinks[i].className = tablinks[i].className.replace(" active", "");
             }
-            evt.currentTarget.className += " active";
+
+            // Check if evt is null
+            if (evt !== null) {
+                evt.currentTarget.className += " active";
+            }
 
             // Load the content using AJAX
             var xhr = new XMLHttpRequest();
@@ -88,12 +96,21 @@
                     document.getElementById("tab-content").innerHTML = this.responseText;
                 }
             };
-            xhr.open("GET", "/" + tabName.toLowerCase(), true);
-            xhr.send();        
-        }
 
-        // Get the element with id="defaultOpen" and click on it
-        document.getElementById("defaultOpen").click();
+            // Load the "Home" tab content directly from the /home route
+            if (tabName === 'Home') {
+                xhr.open("GET", "/home", true);
+                xhr.send();
+            } else {
+                xhr.open("GET", "/" + tabName.toLowerCase(), true);
+                xhr.send();
+            }
+        }
+        
+
+        window.onload = function() {
+            openTab(null, 'Home');
+        }
     </script>
 
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>

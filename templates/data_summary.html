@@ -1,11 +1,15 @@
-<h2>Data Summary</h2>
-    <p id="message"></p>
-<button onclick="toggleTable()" title="Show/hide the data table">Toggle Table</button>
-<button onclick="downloadTable()" title="Download the data table as a CSV file">Download Table</button>
-<button onclick="clearTable()" title="Clear the data table">Clear Table</button>
-<div id="dataTable">
-    {{ tables[0]|safe if tables else 'No tables' }}
-</div>
-<!--Java Script for Plotly Plots-->
-<!--Table functions moved to static/js/table_functions.js-->
-<script src="{{ url_for('static', filename='js/table_functions.js') }}"></script>
+<html>
+    <body>
+        <h2>Data Summary</h2>
+            <p id="message"></p>
+        <button onclick="toggleTable()" title="Show/hide the data table">Toggle Table</button>
+        <button onclick="downloadTable()" title="Download the data table as a CSV file">Download Table</button>
+        <button onclick="clearTable()" title="Clear the data table">Clear Table</button>
+        <div id="dataTable">
+            {{ tables[0]|safe if tables else 'No tables' }}
+        </div>
+        <!--Java Script for Plotly Plots-->
+        <!--Table functions moved to static/js/table_functions.js-->
+        <script src="{{ url_for('static', filename='js/table_functions.js') }}"></script>
+    </body>
+</html>
