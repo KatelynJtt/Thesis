@@ -2,7 +2,12 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, s
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
+import matplotlib
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
+import mpld3
+import seaborn as sns
 import os
 import plotly
 import plotly.graph_objs as go
@@ -10,6 +15,9 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 import json
 import logging
 from logging.handlers import RotatingFileHandler
+
+from eda_utils import create_fig_num, create_fig_cat, corr_heatmap
+
 
 
 app = Flask(__name__)
@@ -140,44 +148,55 @@ def jsonify_columns():
 #-----------------------------------------------------------------Plot Function (EDA)
 @app.route('/plot', methods=['POST'])
 def plot():
-    print(request.get_json())
     if request.is_json:
-        # Proceed if the request data is in JSON format
         data = request.get_json()
-        # Check if 'column1' is in the request data
-        if 'column1' not in data:
-            return jsonify({"error": "Missing 'column1' in request data."}), 400
-        column1 = data['column1']
-        print(column1)
-        column2 = data.get('column2')  # Use .get() to avoid KeyError if 'column2' is not in data
         plot_type = data['plot_type']
         db_dir = './database'
-        db_name = session.get('db_name')  # Get database name from session data
-        table_name = session.get('table_name')  # Get table name from session data
+        db_name = session.get('db_name')
+        table_name = session.get('table_name')
         db_path = os.path.join(db_dir, db_name)
         engine = create_engine('sqlite:///' + db_path)
         df = pd.read_sql_table(table_name, engine)
-        # Profile and encode dataframe
-        profile = profile_categorical_data(df)
-        df_encoded, encoder_dict = smart_encode(df, profile)
-        if column1 == 'ALL':
-            columns = df_encoded.columns.tolist()
-        else:
-            columns = [column1, column2]
-        if plot_type == 'histogram':
-            data = [go.Histogram(x=df[columns[0]])]
-        elif plot_type == 'box':
-            data = [go.Box(y=df[columns[0]])]
-        elif plot_type == 'bar':
-            data = [go.Bar(x=df[columns[0]].value_counts().index, y=df[columns[1]].value_counts().values)]
-        elif plot_type == 'heatmap':
-            data = [go.Heatmap(z=df_encoded[columns].corr().values, x=columns, y=columns, colorscale='Viridis')]
-        graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
-        # Return the graphJSON data as a JSON response
-        return jsonify({'graphJSON': graphJSON})
-        
+
+        if plot_type == 'univariate':
+            column = data['column']
+            if df[column].dtype == 'object':
+                fig = create_fig_cat(column, df)
+            else:
+                fig = create_fig_num(column, df[column])
+
+            # Convert the figure to HTML
+            html_fig = mpld3.fig_to_html(fig)
+            return jsonify({'html_fig': html_fig})
+
+        elif plot_type == 'bivariate':
+            column1 = data['column1']
+            column2 = data['column2']
+
+            # Perform bivariate analysis (e.g., scatter plot, box plot, etc.)
+            fig, ax = plt.subplots(figsize=(8, 6))
+            if df[column1].dtype == 'object' or df[column2].dtype == 'object':
+                sns.boxplot(x=column1, y=column2, data=df, ax=ax)
+            else:
+                sns.scatterplot(x=column1, y=column2, data=df, ax=ax)
+
+            # Convert the figure to HTML
+            html_fig = mpld3.fig_to_html(fig)
+            return jsonify({'html_fig': html_fig})
+
+        elif plot_type == 'multivariate':
+            columns = data['columns']
+
+            # Perform multivariate analysis (e.g., correlation heatmap)
+            fig, ax = plt.subplots(figsize=(8, 6))
+            corr = df[columns].corr()
+            sns.heatmap(corr, annot=True, ax=ax)
+
+            # Convert the figure to HTML
+            html_fig = mpld3.fig_to_html(fig)
+            return jsonify({'html_fig': html_fig})
+
     else:
-        # Return an error response if the request data is not in JSON format
         return jsonify({"error": "Invalid data format. Expected JSON."}), 400
 
 #-------------------------------------------------------------Profile / Encode Data Function

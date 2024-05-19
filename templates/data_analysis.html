@@ -4,73 +4,60 @@
         <div id="eda_functions" class="container">
             <ul class="nav nav-tabs">
                 <li class="nav-item">
-                    <a class="nav-link active" id="histogram-tab" data-toggle="tab" href="#histogram">Histogram</a>
+                    <a class="nav-link active" id="univariate-tab" data-toggle="tab" href="#univariate">Univariate</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" id="box-tab" data-toggle="tab" href="#box-plot">Box Plot</a>
+                    <a class="nav-link" id="bivariate-tab" data-toggle="tab" href="#bivariate">Bivariate</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" id="bar-plot-tab" data-toggle="tab" href="#bar-plot">Bar Plot</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="correlation-heatmap-tab" data-toggle="tab" href="#correlation-heatmap">Correlation Heatmap</a>
+                    <a class="nav-link" id="multivariate-tab" data-toggle="tab" href="#multivariate">Multivariate</a>
                 </li>
             </ul>
+            
             <div class="tab-content" id="eda_functions_content">
-                <div class="tab-pane fade show active" id="histogram">
-                    <select id="histogram-column">
-                    {% for column in numeric_columns %}
+                <!-- Univariate Analysis -->
+                <div class="tab-pane fade show active" id="univariate">
+                    <h3>Univariate Analysis</h3>
+                    <select id="univariate-column">
+                        {% for column in numeric_columns + categorical_columns %}
                         <option value="{{ column }}">{{ column }}</option>
-                    {% endfor %}
+                        {% endfor %}
                     </select>
-                    <button onclick="plot('histogram')" id="create-histogram">Create Histogram</button>
-                    <div id="histogram-figure-display"></div>
+                    <button onclick="plot('univariate')">Univariate Analysis</button>
+                    <div id="univariate-figure-display"></div>                
                 </div>
-                <div class="tab-pane fade" id="box-plot">
-                    <select id="box-column">
-                    {% for column in numeric_columns %}
+                <!-- Bivariate Analysis -->
+                <div class="tab-pane fade" id="bivariate">
+                    <h3>Bivariate Analysis</h3>
+                    <select id="bivariate-column1">
+                        {% for column in numeric_columns + categorical_columns %}
                         <option value="{{ column }}">{{ column }}</option>
-                    {% endfor %}
+                        {% endfor %}
                     </select>
-                    <button onclick="plot('box')" id="create-box-plot">Create Box Plot</button>
-                    <div id="box-figure-display"></div>
+                    <select id="bivariate-column2">
+                        {% for column in numeric_columns + categorical_columns %}
+                        <option value="{{ column }}">{{ column }}</option>
+                        {% endfor %}
+                    </select>
+                    <button onclick="plot('bivariate')">Bivariate Analysis</button>
+                    <div id="bivariate-figure-display"></div>                
                 </div>
-                <div class="tab-pane fade" id="bar-plot">
-                    <select id="bar-column1">
-                    {% for column in categorical_columns %}
+                
+                <div class="tab-pane fade" id="multivariate">
+                    <h3>Multivariate Analysis</h3>
+                    <select id="multivariate-columns" multiple>
+                        {% for column in numeric_columns %}
                         <option value="{{ column }}">{{ column }}</option>
-                    {% endfor %}
+                        {% endfor %}
                     </select>
-                    <select id="bar-column2">
-                    {% for column in categorical_columns %}
-                        <option value="{{ column }}">{{ column }}</option>
-                    {% endfor %}
-                    </select>
-                    <button onclick="plot('bar')" title="create-bar-plot">Create Bar Plot</button>
-                    <div id="bar-figure-display"></div>
-                </div>
-                <div class="tab-pane fade" id="correlation-heatmap">
-                    <button onclick="plot('heatmap')" id="create-correlation-heatmap">Create Correlation Heatmap</button>
-                    <div id="heatmap-figure-display"></div>
+                    <button onclick="plot('multivariate')">Multivariate Analysis</button>
+                    <div id="multivariate-figure-display"></div>
                 </div>
             </div>
         </div>
 
-        <script>
-            $(document).ready(function() {
-                var numericColumns = JSON.parse('{{ numeric_columns|tojson|safe }}');
-                var categoricalColumns = JSON.parse('{{ categorical_columns|tojson|safe }}');
-
-                numericColumns.forEach(function(column) {
-                    $("#histogram-column, #box-column").append(new Option(column, column));
-                });
-
-                categoricalColumns.forEach(function(column) {
-                    $("#bar-column1, #bar-column2").append(new Option(column, column));
-                });
-            });
-        </script>
         <!-- Other scripts -->
         <script src="{{ url_for('static', filename='js/plot.js') }}"></script>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     </body>
 </html>
