@@ -15,7 +15,10 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 import json
 import logging
 from logging.handlers import RotatingFileHandler
+import rasterio
+import geopandas as gpd
 
+from image_utils import RGB2Dataset, MS2Dataset
 from eda_utils import create_fig_num, create_fig_cat, corr_heatmap
 
 
@@ -74,14 +77,17 @@ def data_analysis():
     categorical_columns = session.get('categorical_columns', [])
 
     if db_name and table_name:
+        # A CSV file has been uploaded
         return render_template('data_analysis.html', numeric_columns=numeric_columns, categorical_columns=categorical_columns)
     else:
-        return render_template('data_analysis.html')
+        # No CSV file has been uploaded
+        return render_template('no_file_upload.html', page_name='Data Analysis', numeric_columns=[], categorical_columns=[])
 
 @app.route('/geoimaging')
 def geo_imaging():
-    # Render the geo_imaging.html template or generate the HTML content dynamically
+    # Render the geo_imaging.html template
     return render_template('geo_imaging.html')
+
 
 @app.route('/machinelearning')
 def machine_learning():
@@ -128,7 +134,44 @@ def upload_file():
     else:
         error_message = 'File type is incorrect. Please upload a .csv file.'
         return render_template('index.html', error_message=error_message)
-            
+
+@app.route('/imageprocess', methods=['POST'])
+def image_process():
+    # Get the selected files from the request
+    rgb_image = request.files.get('rgb_image')
+    rgb_shapefile = request.files.get('rgb_shapefile')
+    rband = request.files.get('rband')
+    gband = request.files.get('gband')
+    bband = request.files.get('bband')
+    reband = request.files.get('reband')
+    nirband = request.files.get('nirband')
+    ms_shapefile = request.files.get('ms_shapefile')
+    output_dir = request.form.get('output_dir')
+
+    if rgb_image and rgb_shapefile:
+        # Process RGB dataset
+        filename = rgb_image.filename
+        gdf = gpd.read_file(rgb_shapefile)
+        with rasterio.open(rgb_image) as src:
+            dataset = RGB2Dataset(src, gdf, output_dir, filename)
+        # Call the desired methods from imaging_utils.py
+        # ...
+
+    if rband and gband and bband and reband and nirband and ms_shapefile:
+        # Process Multispectral dataset
+        with rasterio.open(rband) as src_r, \
+             rasterio.open(gband) as src_g, \
+             rasterio.open(bband) as src_b, \
+             rasterio.open(reband) as src_re, \
+             rasterio.open(nirband) as src_nir:
+            gdf = gpd.read_file(ms_shapefile)
+            dataset = MS2Dataset(src_r, src_g, src_b, src_re, src_nir, gdf, output_dir, False)
+        # Call the desired methods from imaging_utils.py
+        # ...
+
+    # Return a success message or redirect to another route
+    return jsonify({'message': 'Files processed successfully'})
+
 #-------------------------------------------------------------JSONify Columns Function
 # Define the '/jsonify_columns' endpoint
 @app.route('/jsonify_columns', methods=['GET'])
@@ -251,6 +294,9 @@ def smart_encode(df, profile):
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'csv'
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

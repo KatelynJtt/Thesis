@@ -1,5 +1,39 @@
+<!DOCTYPE html>
 <html>
-    <body>
-        <h2>Geo Imaging</h2>
-    </body>
+<head>
+    <title>Geo Imaging</title>
+</head>
+<body>
+    <h2>Geo Imaging</h2>
+
+    <div>
+        <h3>File Repository</h3>
+        <div id="file-repository">
+            <!-- Existing uploaded files will be displayed here -->
+        </div>
+        <input type="file" id="file-input" multiple>
+        <button id="upload-btn">Upload Files</button>
+    </div>
+    
+    <div>
+        <h3>Selection Repository</h3>
+        <div id="selection-repository">
+            <div id="rgb-container">
+                <h4>RGB Dataset</h4>
+                <div id="rgb-image" class="dropzone">Drop RGB Image here</div>
+                <div id="rgb-shapefile" class="dropzone">Drop Shapefile here</div>
+            </div>
+            <div id="ms-container">
+                <h4>Multispectral Dataset</h4>
+                <div id="rband" class="dropzone">Drop R Band here</div>
+                <div id="gband" class="dropzone">Drop G Band here</div>
+                <div id="bband" class="dropzone">Drop B Band here</div>
+                <div id="reband" class="dropzone">Drop RE Band here</div>
+                <div id="nirband" class="dropzone">Drop NIR Band here</div>
+                <div id="ms-shapefile" class="dropzone">Drop Shapefile here</div>
+            </div>
+        </div>
+    </div> 
+    <script src="{{ url_for('static', filename='js/image_process.js') }}"></script>   
+</body>
 </html>
