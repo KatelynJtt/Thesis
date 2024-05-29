@@ -37,3 +37,6 @@ Could not build url for endpoint 'uploadimage'. Did you mean 'upload_image' inst
 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
 no_file_uploaded.html
 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+zero-size array to reduction operation fmin which has no identity
+405 Method Not Allowed: The method is not allowed for the requested URL.
+404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.

@@ -1,0 +1,68 @@
+Metadata-Version: 2.0
+Name: pysimple
+Version: 0.1.9
+Summary: Python library for Simple online bank
+Home-page: https://github.com/TFenby/pysimple
+Author: Tyler Fenby
+Author-email: tylerfenby@gmail.com
+License: GPLv3
+Keywords: pysimple simple
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.3
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Requires-Dist: wheel
+Requires-Dist: requests
+Requires-Dist: lxml
+Requires-Dist: click
+
+=============================
+PySimple
+=============================
+
+.. image:: https://badge.fury.io/py/PySimple.png
+    :target: http://badge.fury.io/py/PySimple
+
+.. image:: https://travis-ci.org/TFenby/PySimple.svg?branch=master
+    :target: https://travis-ci.org/TFenby/PySimple
+
+.. image:: https://pypip.in/status/PySimple/badge.svg
+    :target: https://pypi.python.org/pypi/pysimple
+
+
+A client library for Simple's online banking site.
+
+* Free software: GPLv3
+* Documentation: https://pysimple.readthedocs.org
+
+Features
+--------
+
+* Basic account balance and goal support
+
+
+
+Documentation
+-------------
+
+The full documentation is at http://pysimple.rtfd.org.
+
+
+
+History
+-------
+
+0.1.0 2014/12/13
+---------------------
+
+* First release on PyPI.
+* Initial working release
+
+

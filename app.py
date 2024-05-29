@@ -18,7 +18,7 @@ from logging.handlers import RotatingFileHandler
 import rasterio
 import geopandas as gpd
 
-from image_utils import RGB2Dataset, MS2Dataset
+from image_utils import RGB2Dataset, MS2Dataset, otsu
 from eda_utils import create_fig_num, create_fig_cat, corr_heatmap
 
 
@@ -83,10 +83,85 @@ def data_analysis():
         # No CSV file has been uploaded
         return render_template('no_file_upload.html', page_name='Data Analysis', numeric_columns=[], categorical_columns=[])
 
-@app.route('/geoimaging')
+@app.route('/geo-imaging', methods=['GET', 'POST'])
 def geo_imaging():
+    if request.method == 'POST':
+        # Handle form submission
+        action = request.form.get('action')
+
+        # RGB processing
+        if action.startswith('rgb_'):
+            rgb_image = request.files.get('rgb_image')
+            rgb_shapefile = request.files.get('rgb_shapefile')
+            polygon_id_column = request.form.get('polygon_id_column')
+            geometry_column = request.form.get('geometry_column')
+            output_dir = request.form.get('output_dir')
+
+            if rgb_image and rgb_shapefile:
+                # Process RGB dataset
+                filename = rgb_image.filename
+                gdf = gpd.read_file(rgb_shapefile)
+                with rasterio.open(rgb_image) as src:
+                    dataset = RGB2Dataset(src, gdf, output_dir, filename)
+
+                if action == 'rgb_geotiff':
+                    dataset.clip_rasterio_shape()
+                elif action == 'rgb_vi_histogram':
+                    plot_index = request.form.get('plot_index')
+                    dataset.visualization_plot(int(plot_index), True)
+                elif action == 'rgb_clip_image':
+                    dataset.clip_rasterio_shape()
+                elif action == 'rgb_auto_extraction':
+                    # Call the function for auto dataset extraction
+                    pass
+                elif action == 'rgb_manual_extraction':
+                    # Call the function for manual dataset extraction
+                    pass
+
+        # Multispectral processing
+        elif action.startswith('ms_'):
+            rband = request.files.get('rband')
+            gband = request.files.get('gband')
+            bband = request.files.get('bband')
+            reband = request.files.get('reband')
+            nirband = request.files.get('nirband')
+            ms_shapefile = request.files.get('ms_shapefile')
+            ms_polygon_id_column = request.form.get('ms_polygon_id_column')
+            ms_geometry_column = request.form.get('ms_geometry_column')
+            ms_output_dir = request.form.get('ms_output_dir')
+
+            if rband and gband and bband and reband and nirband and ms_shapefile:
+                # Process Multispectral dataset
+                with rasterio.open(rband) as src_r, \
+                     rasterio.open(gband) as src_g, \
+                     rasterio.open(bband) as src_b, \
+                     rasterio.open(reband) as src_re, \
+                     rasterio.open(nirband) as src_nir:
+                    gdf = gpd.read_file(ms_shapefile)
+                    gdf = gdf.rename(columns={ms_polygon_id_column: "Plot_ID"})
+                    gdf = gdf.rename(columns={ms_geometry_column: "geometry"})
+                    dataset = MS2Dataset(src_r, src_g, src_b, src_re, src_nir, gdf, ms_output_dir, False)
+
+                if action == 'ms_geotiff':
+                    dataset.clip_rasterio_shape()
+                elif action == 'ms_vi_histogram':
+                    plot_index = request.form.get('plot_index')
+                    dataset.visualization_plot(int(plot_index), True, None)
+                elif action == 'ms_clip_image':
+                    dataset.clip_rasterio_shape()
+                elif action == 'ms_auto_extraction':
+                    target_df = request.form.get('target_df')
+                    if target_df:
+                        dataset.dataset_extraction_auto(target_df)
+                elif action == 'ms_manual_extraction':
+                    dataset.manu_extraction_window_ms()
+
+        # Return a success message or redirect to another route
+        return jsonify({'message': 'Files processed successfully'})
+
     # Render the geo_imaging.html template
     return render_template('geo_imaging.html')
+
 
 
 @app.route('/machinelearning')
@@ -134,43 +209,6 @@ def upload_file():
     else:
         error_message = 'File type is incorrect. Please upload a .csv file.'
         return render_template('index.html', error_message=error_message)
-
-@app.route('/imageprocess', methods=['POST'])
-def image_process():
-    # Get the selected files from the request
-    rgb_image = request.files.get('rgb_image')
-    rgb_shapefile = request.files.get('rgb_shapefile')
-    rband = request.files.get('rband')
-    gband = request.files.get('gband')
-    bband = request.files.get('bband')
-    reband = request.files.get('reband')
-    nirband = request.files.get('nirband')
-    ms_shapefile = request.files.get('ms_shapefile')
-    output_dir = request.form.get('output_dir')
-
-    if rgb_image and rgb_shapefile:
-        # Process RGB dataset
-        filename = rgb_image.filename
-        gdf = gpd.read_file(rgb_shapefile)
-        with rasterio.open(rgb_image) as src:
-            dataset = RGB2Dataset(src, gdf, output_dir, filename)
-        # Call the desired methods from imaging_utils.py
-        # ...
-
-    if rband and gband and bband and reband and nirband and ms_shapefile:
-        # Process Multispectral dataset
-        with rasterio.open(rband) as src_r, \
-             rasterio.open(gband) as src_g, \
-             rasterio.open(bband) as src_b, \
-             rasterio.open(reband) as src_re, \
-             rasterio.open(nirband) as src_nir:
-            gdf = gpd.read_file(ms_shapefile)
-            dataset = MS2Dataset(src_r, src_g, src_b, src_re, src_nir, gdf, output_dir, False)
-        # Call the desired methods from imaging_utils.py
-        # ...
-
-    # Return a success message or redirect to another route
-    return jsonify({'message': 'Files processed successfully'})
 
 #-------------------------------------------------------------JSONify Columns Function
 # Define the '/jsonify_columns' endpoint

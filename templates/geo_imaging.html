@@ -2,38 +2,196 @@
 <html>
 <head>
     <title>Geo Imaging</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 </head>
 <body>
     <h2>Geo Imaging</h2>
 
-    <div>
-        <h3>File Repository</h3>
-        <div id="file-repository">
-            <!-- Existing uploaded files will be displayed here -->
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="rgb-tab" data-toggle="tab" href="#rgb" role="tab" aria-controls="rgb" aria-selected="true">RGB</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="ms-tab" data-toggle="tab" href="#ms" role="tab" aria-controls="ms" aria-selected="false">Multispectral</a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="myTabContent">
+        <div class="tab-pane fade show active" id="rgb" role="tabpanel" aria-labelledby="rgb-tab">
+            <form method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="rgb_image">Select RGB Image:</label>
+                    <input type="file" id="rgb_image" name="rgb_image" class="form-control-file" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="rgb_shapefile">Select Shapefile:</label>
+                    <input type="file" id="rgb_shapefile" name="rgb_shapefile" class="form-control-file" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="polygon_id_column">Select Polygon ID in Shapefile:</label>
+                    <select id="polygon_id_column" name="polygon_id_column" class="form-control" required>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="geometry_column">Select Geometry in Shapefile:</label>
+                    <select id="geometry_column" name="geometry_column" class="form-control" required>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="output_dir">Select Output Folder:</label>
+                    <input type="text" id="output_dir" name="output_dir" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" name="action" value="geotiff" class="btn btn-primary">GeoTIFF</button>
+                    <button type="submit" name="action" value="vi_histogram" class="btn btn-primary">VI Histogram Virulization</button>
+                    <button type="submit" name="action" value="clip_image" class="btn btn-primary">Clip Image</button>
+                    <button type="submit" name="action" value="auto_extraction" class="btn btn-primary">Auto Dataset Extraction</button>
+                    <button type="submit" name="action" value="manual_extraction" class="btn btn-primary">Manual Dataset Extraction</button>
+                </div>
+
+                <div id="rgb-manual-extraction" style="display: none;">
+                    <h3>Manual RGB Extraction</h3>
+                    <div>
+                        <label for="rgb-vi-select">Select VI:</label>
+                        <select id="rgb-vi-select">
+                            <option value="NDI">NDI</option>
+                            <option value="ExG">ExG</option>
+                            <!-- Add more options for other VIs -->
+                        </select>
+                    </div>
+                    <div id="rgb-manual-extraction-plots"></div>
+                    <button id="rgb-manual-extraction-ok">OK</button>
+                </div>
+            </form>
         </div>
-        <input type="file" id="file-input" multiple>
-        <button id="upload-btn">Upload Files</button>
+
+        <div class="tab-pane fade" id="ms" role="tabpanel" aria-labelledby="ms-tab">
+            <form method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="rband">Select R Band:</label>
+                    <input type="file" id="rband" name="rband" class="form-control-file" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="gband">Select G Band:</label>
+                    <input type="file" id="gband" name="gband" class="form-control-file" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="bband">Select B Band:</label>
+                    <input type="file" id="bband" name="bband" class="form-control-file" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="reband">Select Rededge Band:</label>
+                    <input type="file" id="reband" name="reband" class="form-control-file" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="nirband">Select NIR Band:</label>
+                    <input type="file" id="nirband" name="nirband" class="form-control-file" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="ms_shapefile">Select Shapefile:</label>
+                    <input type="file" id="ms_shapefile" name="ms_shapefile" class="form-control-file" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="ms_polygon_id_column">Select Polygon ID in Shapefile:</label>
+                    <select id="ms_polygon_id_column" name="ms_polygon_id_column" class="form-control" required>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="ms_geometry_column">Select Geometry in Shapefile:</label>
+                    <select id="ms_geometry_column" name="ms_geometry_column" class="form-control" required>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="ms_output_dir">Select Output Folder:</label>
+                    <input type="text" id="ms_output_dir" name="ms_output_dir" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" name="action" value="geotiff" class="btn btn-primary">GeoTIFF</button>
+                    <button type="submit" name="action" value="vi_histogram" class="btn btn-primary">VI Histogram Virulization</button>
+                    <button type="submit" name="action" value="clip_image" class="btn btn-primary">Clip Image</button>
+                    <button type="submit" name="action" value="auto_extraction" class="btn btn-primary">Auto Dataset Extraction</button>
+                    <button type="submit" name="action" value="manual_extraction" class="btn btn-primary">Manual Dataset Extraction</button>
+                </div>
+            </form>
+        </div>
     </div>
-    
-    <div>
-        <h3>Selection Repository</h3>
-        <div id="selection-repository">
-            <div id="rgb-container">
-                <h4>RGB Dataset</h4>
-                <div id="rgb-image" class="dropzone">Drop RGB Image here</div>
-                <div id="rgb-shapefile" class="dropzone">Drop Shapefile here</div>
-            </div>
-            <div id="ms-container">
-                <h4>Multispectral Dataset</h4>
-                <div id="rband" class="dropzone">Drop R Band here</div>
-                <div id="gband" class="dropzone">Drop G Band here</div>
-                <div id="bband" class="dropzone">Drop B Band here</div>
-                <div id="reband" class="dropzone">Drop RE Band here</div>
-                <div id="nirband" class="dropzone">Drop NIR Band here</div>
-                <div id="ms-shapefile" class="dropzone">Drop Shapefile here</div>
-            </div>
-        </div>
-    </div> 
-    <script src="{{ url_for('static', filename='js/image_process.js') }}"></script>   
+
+    <script>
+        // JavaScript code to populate the dropdown options dynamically
+        // when the shapefile is selected
+        const rgbShapefileInput = document.getElementById('rgb_shapefile');
+        const polygonIdColumnSelect = document.getElementById('polygon_id_column');
+        const geometryColumnSelect = document.getElementById('geometry_column');
+
+        const msShapefileInput = document.getElementById('ms_shapefile');
+        const msPolygonIdColumnSelect = document.getElementById('ms_polygon_id_column');
+        const msGeometryColumnSelect = document.getElementById('ms_geometry_column');
+
+        rgbShapefileInput.addEventListener('change', () => {
+            const file = rgbShapefileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const gdf = new geopandas.GeoDataFrame.from_file(reader.result);
+                    const columns = gdf.columns;
+                    populateDropdowns(columns, polygonIdColumnSelect, geometryColumnSelect);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                clearDropdowns(polygonIdColumnSelect, geometryColumnSelect);
+            }
+        });
+
+        msShapefileInput.addEventListener('change', () => {
+            const file = msShapefileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const gdf = new geopandas.GeoDataFrame.from_file(reader.result);
+                    const columns = gdf.columns;
+                    populateDropdowns(columns, msPolygonIdColumnSelect, msGeometryColumnSelect);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                clearDropdowns(msPolygonIdColumnSelect, msGeometryColumnSelect);
+            }
+        });
+
+        function populateDropdowns(columns, polygonIdColumnSelect, geometryColumnSelect) {
+            clearDropdowns(polygonIdColumnSelect, geometryColumnSelect);
+            columns.forEach(column => {
+                const option = document.createElement('option');
+                option.value = column;
+                option.text = column;
+                polygonIdColumnSelect.add(option);
+                geometryColumnSelect.add(option.cloneNode(true));
+            });
+        }
+
+        function clearDropdowns(polygonIdColumnSelect, geometryColumnSelect) {
+            polygonIdColumnSelect.innerHTML = '';
+            geometryColumnSelect.innerHTML = '';
+        }
+    </script>
 </body>
 </html>
