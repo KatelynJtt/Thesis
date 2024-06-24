@@ -1,0 +1,80 @@
+/* Font styles */
+body, h1, h2, h3, h4, h5, h6 {
+    font-family: "Lato", sans-serif;
+}
+
+.nav-bar, h1, button {
+    font-family: "Montserrat", sans-serif;
+}
+
+/* Icon styles */
+.fa-anchor, .fa-coffee {
+    font-size: 200px;
+}
+
+/* Tab styles */
+.tab {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #4CAF50; /* Green background */
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2); /* Drop shadow */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-container {
+    margin-bottom: 20px;
+}
+
+.content-container {
+    padding: 20px;
+    border: 1px solid #ccc;
+}
+
+.tab-buttons {
+    display: flex;
+}
+
+.file-upload-container {
+    display: flex;
+    align-items: center;
+}
+
+.upload-label {
+    font-size: 1.2rem; /* Adjust the font size as needed */
+    margin-right: 20px;
+    color: white;
+}
+
+.file-upload {
+    margin-right: 10px;
+}
+
+.tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+    color: white; /* White font color */
+}
+
+.tab button:hover {
+    background-color: white; /* White background on hover */
+    color: black; /* Black font color on hover */
+}
+
+.tab button.active {
+    color: #4CAF50; /* Green text */
+    background-color: black;
+}
+
+.tabcontent {
+    display: none;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-top: none;
+}

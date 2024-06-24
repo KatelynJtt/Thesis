@@ -1,5 +1,35 @@
+<!DOCTYPE html>
 <html>
-    <body>
-        <h2>Machine Learning</h2>
-    </body>
+<head>
+    <title>Machine Learning</title>
+</head>
+<body>
+    <h1>Machine Learning</h1>
+
+    <form method="post" enctype="multipart/form-data">
+        <label for="dataset_file">Upload Dataset:</label>
+        <input type="file" id="dataset_file" name="dataset_file" required>
+        <br>
+
+        <label for="features">Select Features:</label>
+        <select id="features" name="features" multiple required>
+            <!-- Populate options dynamically based on your data -->
+        </select>
+        <br>
+
+        <label for="label">Select Label:</label>
+        <select id="label" name="label" required>
+            <!-- Populate options dynamically based on your data -->
+        </select>
+        <br>
+
+        <input type="submit" value="Run Machine Learning">
+    </form>
+
+    {% if results %}
+        <h2>Results</h2>
+        <!-- Display the results using Jinja2 templating -->
+        <pre>{{ results }}</pre>
+    {% endif %}
+</body>
 </html>

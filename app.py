@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, send_from_directory
+from werkzeug.utils import secure_filename
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
@@ -18,7 +19,7 @@ from logging.handlers import RotatingFileHandler
 import rasterio
 import geopandas as gpd
 
-from image_utils import RGB2Dataset, MS2Dataset, otsu
+from image_utils import RGB2Dataset
 from eda_utils import create_fig_num, create_fig_cat, corr_heatmap
 
 
@@ -83,7 +84,8 @@ def data_analysis():
         # No CSV file has been uploaded
         return render_template('no_file_upload.html', page_name='Data Analysis', numeric_columns=[], categorical_columns=[])
 
-@app.route('/geo-imaging', methods=['GET', 'POST'])
+#--------------------------------------------------------------------------------------------------------------------------------#### GEO-IMAGING
+@app.route('/geoimaging', methods=['GET', 'POST'])
 def geo_imaging():
     if request.method == 'POST':
         # Handle form submission
@@ -112,11 +114,11 @@ def geo_imaging():
                 elif action == 'rgb_clip_image':
                     dataset.clip_rasterio_shape()
                 elif action == 'rgb_auto_extraction':
-                    # Call the function for auto dataset extraction
-                    pass
+                    target_df = request.form.get('target_df')
+                    if target_df:
+                        dataset.dataset_extraction_auto(target_df)
                 elif action == 'rgb_manual_extraction':
-                    # Call the function for manual dataset extraction
-                    pass
+                    dataset.manu_extraction_window_rgb()
 
         # Multispectral processing
         elif action.startswith('ms_'):
@@ -162,7 +164,96 @@ def geo_imaging():
     # Render the geo_imaging.html template
     return render_template('geo_imaging.html')
 
+@app.route('/calculate-cover', methods=['POST'])
+def calculate_cover():
+    input_data = request.get_json()
+    result = RGB2Dataset.calculate_canopy_cover(input_data)
+    return jsonify(result)
 
+@app.route('/calculate-vi', methods=['POST'])
+def calculate_vi():
+    input_data = request.get_json()
+    red = input_data['red']
+    green = input_data['green']
+    blue = input_data['blue']
+    selected_vi = input_data.get('selected_vi', None)
+    result = RGB2Dataset.calculate_vi(red, green, blue, selected_vi)
+    return jsonify(result)
+
+@app.route('/extract-dataset', methods=['POST'])
+def extract_dataset():
+    # Assume 'target_data' is the key for the target DataFrame file
+    target_df_file = request.files['target_data']
+    target_df_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(target_df_file.filename))
+    target_df_file.save(target_df_path)
+    target_df = pd.read_excel(target_df_path)
+
+    # Instantiate the class and call the method
+    # Assume 'image' is the key for the image file
+    image_file = request.files['image']
+    image_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(image_file.filename))
+    image_file.save(image_path)
+
+    # Open the image with rasterio
+    with rasterio.open(image_path) as src:
+        # Assume 'shapefile' is the key for the shapefile
+        shapefile = request.files['shapefile']
+        gdf = gpd.read_file(shapefile.stream)  # Read shapefile
+        rgb_dataset = RGB2Dataset(src=src, gdf=gdf, output_dir=app.config['UPLOAD_FOLDER'], filename=image_file.filename)
+        excel_filepath = rgb_dataset.dataset_extraction_auto(target_df)
+
+    return send_from_directory(directory=os.path.dirname(excel_filepath), filename=os.path.basename(excel_filepath), as_attachment=True)
+
+@app.route('/clip-shape', methods=['POST'])
+def clip_shape():
+    image_file = request.files['image']
+    shapefile = request.files['shapefile']
+    image_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(image_file.filename))
+    shapefile_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(shapefile.filename))
+    image_file.save(image_path)
+    shapefile.save(shapefile_path)
+
+    # Instantiate the class and call the method
+    rgb_dataset = RGB2Dataset(src=image_path, gdf=shapefile_path, output_dir=app.config['UPLOAD_FOLDER'], filename=image_file.filename)
+    rgb_dataset.clip_rasterio_shape()
+
+    return jsonify({"message": "Image clipped successfully"})
+
+@app.route('/visualize-plot', methods=['POST'])
+def visualize_plot():
+    plot_index = int(request.form['plot_index'])
+    hist_or_cc = request.form['hist_or_cc'].lower() == 'true'
+
+    # Instantiate the class and call the method
+    rgb_dataset = RGB2Dataset(...)  # Provide the necessary arguments
+    fig_path = rgb_dataset.visualization_plot(plot_index, hist_or_cc)
+
+    return send_from_directory(directory=os.path.dirname(fig_path), filename=os.path.basename(fig_path), as_attachment=True)
+
+@app.route('/visualize-shpfile', methods=['GET'])
+def visualize_shpfile():
+    # Instantiate the class and call the method
+    rgb_dataset = RGB2Dataset(...)  # Provide the necessary arguments
+    fig_path = rgb_dataset.visualization_shpfile()
+
+    return send_from_directory(directory=os.path.dirname(fig_path), filename=os.path.basename(fig_path), as_attachment=True)
+
+@app.route('/check-original', methods=['GET'])
+def check_original():
+    # Instantiate the class and call the method
+    rgb_dataset = RGB2Dataset(...)  # Provide the necessary arguments
+    fig_path = rgb_dataset.check_original()
+
+    return send_from_directory(directory=os.path.dirname(fig_path), filename=os.path.basename(fig_path), as_attachment=True)
+
+@app.route('/check-clipped', methods=['GET'])
+def check_clipped():
+    # Instantiate the class and call the method
+    rgb_dataset = RGB2Dataset(...)  # Provide the necessary arguments
+    fig_path = rgb_dataset.check_clipped()
+
+    return send_from_directory(directory=os.path.dirname(fig_path), filename=os.path.basename(fig_path), as_attachment=True)
+#--------------------------------------------------------------------------------------------------------------------------------------End of Geo Routes
 
 @app.route('/machinelearning')
 def machine_learning():

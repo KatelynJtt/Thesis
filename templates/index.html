@@ -3,49 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <title>Data Display and Plot</title>
-    <style>
-        /* Tab styling */
-        .tab {
-            overflow: hidden;
-            border: 1px solid #ccc;
-            background-color: #f1f1f1;
-        }
-
-        .tab button {
-            background-color: inherit;
-            float: left;
-            border: none;
-            outline: none;
-            cursor: pointer;
-            padding: 14px 16px;
-            transition: 0.3s;
-        }
-
-        .tab button:hover {
-            background-color: #ddd;
-        }
-
-        .tab button.active {
-            background-color: #ccc;
-        }
-
-        .tabcontent {
-            display: none;
-            padding: 6px 12px;
-            border: 1px solid #ccc;
-            border-top: none;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Montserrat">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
 </head>
 <body>
-    <div class="tab">
-        <button class="tablinks" onclick="openTab(event, 'Home')">Home</button>
-        <button class="tablinks" onclick="openTab(event, 'DataSummary')">Data Summary</button>
-        <button class="tablinks" onclick="openTab(event, 'DataAnalysis')">Data Analysis</button>
-        <button class="tablinks" onclick="openTab(event, 'GeoImaging')">Geo Imaging</button>
-        <button class="tablinks" onclick="openTab(event, 'MachineLearning')">Machine Learning</button>
-        <button class="tablinks" onclick="openTab(event, 'TrainedModels')">Trained Models</button>    
+    <div class="nav-container">
+        <div class="tab">
+            <div class="tab-buttons">
+                <button class="tablinks" onclick="openTab(event, 'Home')">Home</button>
+                <button class="tablinks" onclick="openTab(event, 'DataSummary')">Data Summary</button>
+                <button class="tablinks" onclick="openTab(event, 'DataAnalysis')">Data Analysis</button>
+                <button class="tablinks" onclick="openTab(event, 'GeoImaging')">Geo Imaging</button>
+                <button class="tablinks" onclick="openTab(event, 'MachineLearning')">Machine Learning</button>
+                <button class="tablinks" onclick="openTab(event, 'TrainedModels')">Trained Models</button>
+            </div>
+            <div class="file-upload">
+                <div class="file-upload-container">
+                    <h1 class="upload-label">Upload CSV File</h1>
+                    <form action="/upload" method="POST" enctype="multipart/form-data">
+                        <input type="file" name="file">
+                        <input type="submit" value="Upload">
+                    </form>
+                </div> 
+            </div>
+        </div>
     </div>
 
     {% if success_message %}
@@ -58,7 +42,9 @@
     </div>
     {% endif %}
     
-    <div id="tab-content"></div>
+    <div class="content-container">
+        <div id="tab-content"></div>
+    </div>
 
     <!-- Include JavaScript files and functions -->
     <script src="{{ url_for('static', filename='js/table_functions.js') }}"></script>
