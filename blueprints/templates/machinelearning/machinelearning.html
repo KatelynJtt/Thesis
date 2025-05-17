@@ -1,0 +1,244 @@
+<link rel="stylesheet" href="{{ url_for('machinelearning.static', filename='machinelearning/machinelearning.css') }}">
+
+<div id="ml-content" class="split-container" data-filename="{{ filename }}">
+    <div class="top-half">    
+        <div class="container">
+            <div class="flex-container">
+                <div class="flex-column left-column">
+                    <div class="horizontal-blocks">
+                        <div id="selected-file-display">
+                            <div id="upload-prompt" style="display: none;">
+                                <h3>Please upload a CSV file to begin analysis</h3>
+                            </div>
+                            <div id="file-info" style="display: none;">
+                                <h3>Selected File: <span id="selected-filename"></span></h3>
+                            </div>
+                        </div>                    
+                        <div class="block select-block">
+                            <form method="post">
+                                <div id="message-div" style="color: red;">{{ message }}</div>
+                                <h2>Select Features and Label</h2>
+                                <div class="form-row">
+                                    <div class="form-column">
+                                        <label for="features">Features:</label>
+                                        <select name="features" id="features" multiple>
+                                            {% for feature in features %}
+                                            <option value="{{ feature }}">{{ feature }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-column">
+                                        <label for="label">Label:</label>
+                                        <select name="label" id="label">
+                                            {% for label_option in labels %}
+                                            <option value="{{ label_option }}">{{ label_option }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <input type="submit" name="select_features" value="Select Features and Label">
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="test-size-container">
+                        <label class="test-size-label" for="test_size">Test Size</label>
+                        <div class="test-size-value" id="test_size_value">0</div>
+                        <input type="range" name="test_size" id="test_size" min="0" max="1" step="0.1" value="0">
+                    </div>                
+                    <div class="block full-width">
+                        <label>Ensemble Method:</label>
+                        <div class="ensemble-radio">
+                            <div>
+                                <input type="radio" name="ensemble_method" value="none" id="none_ensemble" checked>
+                                <label for="none_ensemble">None</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="ensemble_method" value="stacking" id="stacking_ensemble">
+                                <label for="stacking_ensemble">Stacking</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="ensemble_method" value="voting" id="voting_ensemble">
+                                <label for="voting_ensemble">Voting</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="ensemble_method" value="bagging" id="bagging_ensemble">
+                                <label for="bagging_ensemble">Bagging</label>
+                            </div>
+                        </div>
+                        <div class="method-selection">
+                            <span>Number of methods: </span>
+                            <input type="number" id="methodCount" min="2" disabled>
+                            <button id="runAllModels" disabled>Run All</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-column right-column">
+                    <div class="tabs-container">
+                        <div class="model-type-toggle">
+                            <h2 class="toggle-label">Regression</h2>
+                            <label class="switch">
+                                <input type="checkbox" id="modelTypeToggle">
+                                <span class="slider round"></span>
+                            </label>
+                            <h2 class="toggle-label">Classification</h2>
+                        </div>
+                        <div class="tab-content">
+                            <div id="regression" class="tab-pane fade show active">
+                                <div id="regressionBtnGroup" class="button-group flex-buttons">
+                                    <button>LinearRegression</button>
+                                    <button>SVR</button>
+                                    <button>Ridge</button>
+                                    <button>Lasso</button>
+                                    <button>ElasticNet</button>
+                                    <button>BayesianRidge</button>
+                                    <button>SGD</button>
+                                    <button>RandomForest</button>
+                                    <button>GradientBoosting</button>
+                                    <button>AdaBoost</button>
+                                    <button>DecisionTree</button>
+                                    <button>KNN</button>
+                                    <button>XGBoost</button>
+                                    <button>LightGBM</button>
+                                    <button>CatBoost</button>
+                                    <button>MLPRegressor</button>
+                                    <button id="runButton" class="runButton">Run</button>
+                                </div>
+                            </div>
+                            <div id="classification" class="tab-pane fade">
+                                <div id="classificationBtnGroup" class="button-group flex-buttons">
+                                    <button>AdaBoostClassifier</button>
+                                    <button>BaggingClassifier</button>
+                                    <button>BernoulliNB</button>
+                                    <button>DecisionTreeClassifier</button>
+                                    <button>GuassianNB</button>
+                                    <button>GradientBoostingClassifier</button>
+                                    <button>KNeighborsClassifier</button>
+                                    <button>LogisticRegression</button>
+                                    <button>SVC</button>
+                                    <button>LinearSVC</button>
+                                    <button>NuSVC</button>
+                                    <button>PassiveAgressiveClassifier</button>
+                                    <button>RandomForestClassifier</button>
+                                    <button>RidgeClassifier</button>
+                                    <button>SGDClassifier</button>
+                                    <button id="runButton" class="runButton">Run</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="modelParametersContainer">
+                        <!-- Empty space for model parameter popups -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="bottom-half" style="display: none;">
+        <div>
+            <h2 id="regressor">Regressor</h2>
+        </div>
+        <div class="parameter-row">
+            <div class="block">
+                <h3 class="centered-heading">Parameter Optimization Method</h3>
+                <div class="param-radio-group">
+                    <label><input type="radio" name="search_method" value="none" checked> None</label>
+                    <label><input type="radio" name="search_method" value="grid"> Grid Search</label>
+                    <label><input type="radio" name="search_method" value="random"> Random Search</label>
+                </div>            
+            </div>
+            <div class="block">
+                <h3 class="centered-heading">Model Parameters</h3>
+                <div class="model-params">
+                    <!-- Parameters will be added dynamically -->
+                    <!--Depending on Search Method: default None-->
+                </div>
+            </div>
+            <div class="block train-predict-block">
+                <button id="trainPredict">Train and Predict</button>
+            </div>
+        </div>
+
+        <div class="results-and-tables-container">
+            <div class="results-block">
+                <h3>Results</h3>
+                <img class="result-plot" id="mainPlot" alt="Main Plot">
+                <img class="result-plot" id="additionalPlot1" alt="Additional Plot 1">
+                <img class="result-plot" id="additionalPlot2" alt="Additional Plot 2">
+            </div>
+            
+            <div class="tables-block">
+                <table id="trainScoreTable" class="score-table">
+                    <caption>Train Score</caption>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                    </tbody>
+                </table>
+                <table id="testScoreTable" class="score-table">
+                    <caption>Test Score</caption>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="block">
+            <div class="button-row">
+                <button id="explainShap">Explain with SHAP</button>
+                <button id="explainLime">Explain with LIME</button>
+                <button id="viewOptimalParams">View Optimal Parameters</button>
+                <button id="saveTrainedModel">Save Trained Model</button>
+                <button id="saveDisplayedResult">Save Displayed Result</button>
+                <button id="helpButton">Help</button>
+                <button id="closeButton">Close</button>
+            </div>
+        </div>
+        <div id="shapPlotContainer"></div>
+        <div id="limePlotContainer"></div>
+        <div id="bestParamsContainer" style="display: none;">
+            <h3>Optimal Parameters</h3>
+            <pre id="bestParams"></pre>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="{{ url_for('machinelearning.static', filename='machinelearning/ml_events.js') }}"></script>

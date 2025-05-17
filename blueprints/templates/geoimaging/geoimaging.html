@@ -1,0 +1,469 @@
+<link rel="stylesheet" href="{{ url_for('geoimaging.static', filename='geoimaging/geoimaging.css') }}">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<!-- Socket.IO -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.js"></script>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Bootstrap 5 stack -->
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<div class="container">
+    <div id="geoimaging_app" class="geoimaging-container">
+        <div class="geoimaging-content">
+            <!-- Add radio buttons for RGB and Multispectral image types -->
+            <div class="form-group">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="imageType" id="rgbImageRadio" value="rgb" checked>
+                    <label class="form-check-label" for="rgbImage">RGB</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="imageType" id="msImageRadio" value="ms">
+                    <label class="form-check-label" for="msImage">Multispectral (MS)</label>
+                </div>
+            </div>
+
+            <!-- RGB layout elements go here -->
+            <div id="rgbLayout">
+                <h3 class="mt-4">RGB Image Processing</h3>
+                <hr> 
+                <!-- RGB Upload Section -->
+                <h4 class="mt-3">Upload Files</h4>
+                <div class="form-group">
+                    <label for="rgbImageLabel">Select RGB Image:</label>
+                    <input type="file" class="form-control-file" id="rgbImageInput" accept=".tif">
+                    <button type="button" class="btn btn-primary" id="rgbImageUploadBtn">Upload Image</button>
+                    <span id="rgbImageUploadStatus"></span>
+                    <span id="rgbImageSpinner" class="spinner"></span>
+                </div>
+                <div class="form-group">
+                    <label for="rgbShapefileLabel">Select Shapefile Files:</label>
+                    <input type="file" class="form-control-file" id="rgbShapefile" accept=".shp,.shx,.dbf,.prj,.cpg,.sbn,.sbx" multiple>
+                    <button type="button" class="btn btn-primary" id="rgbShapefileUploadBtn">Upload Shapefile</button>
+                    <span id="rgbShapefileUploadStatus"></span>
+                    <span id="rgbShapefileSpinner" class="spinner"></span>
+                </div>
+                <div class="form-group">
+                    <label>Retrieved Plot IDs:</label>
+                    <div class="scroll-box" id="rgbPlotIdsList"></div>
+                </div>
+                <div class="form-group">
+                    <label>Retrieved Geometries:</label>
+                    <div class="scroll-box" id="rgbGeometriesList"></div>
+                </div>
+                <!-- RGB Clipping and Preview Section -->
+                <h4 class="mt-4">Image Clipping and Preview</h4>
+                <div class="form-group mt-3">                    
+                    <div class="mt-3">
+                        <button type="button" 
+                                class="btn btn-primary" 
+                                id="rgbClipBtn" 
+                                data-bs-toggle="tooltip" 
+                                data-bs-placement="top" 
+                                title="Initializes data structures and clips rgb images for analysis">
+                            Process & Clip RGB Image
+                        </button>                       
+                        <button type="button" class="btn btn-primary" id="rgbPreviewBtn" disabled>Preview Clipped Images</button>
+                        <button type="button" class="btn btn-secondary" id="rgbClearPreviewBtn">Clear Preview</button>
+                        <button type="button" class="btn btn-success" id="rgbDownloadAllBtn">Download All</button>
+                        <div id="rgbClipStatus" class="mt-2"></div>
+                        <button class="btn btn-link" id="rgbCollapseBtn" disabled>
+                            <i class="fas fa-chevron-down"></i> <!-- Changed to down arrow when collapsed -->
+                        </button>
+                        <div id="rgbPreviewStatus" class="mt-2"></div>
+                        <!-- Progress Bar for RGB Preview -->
+                        <div id="rgbPreviewProgress" class="progress mb-3" style="display: none;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" 
+                                 style="width: 0%" 
+                                 aria-valuenow="0" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>                        
+                        <!-- Collapsible RGB Preview Section -->
+                        <div id="rgbClippedImagesPreview" class="mt-3 collapse">
+                            <div id="rgbImageGrid" class="d-flex flex-wrap gap-3"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- RGB Dataset Section -->
+                <h4 class="mt-4">Dataset Creation</h4>
+                <div class="form-group mt-3">
+                    <span id="rgbDatasetStatus"></span>
+                    <div id="rgbSection" class="processing-section">
+                        <!-- Extract Tabs -->
+                        <h3 class="subsection-title">Dataset Extraction</h3>
+                        <ul class="nav nav-tabs" id="rgbExtractTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active" id="rgb-auto-tab" data-bs-toggle="tab" data-bs-target="#rgbAutoExtract" role="tab" aria-controls="rgbAutoExtract" aria-selected="true">Auto Extract</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="rgb-manual-tab" data-bs-toggle="tab" data-bs-target="#rgbManualExtract" role="tab" aria-controls="rgbManualExtract" aria-selected="false">Manual Extract</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="rgbExtractContent">
+                            <div class="tab-pane fade show active" id="rgbAutoExtract" role="tabpanel" aria-labelledby="rgb-auto-tab">
+                                <!-- Auto extract content -->
+                                <button type="button" class="btn btn-primary" id="rgbAutoExtractBtn">Extract</button>
+                                <div id="rgbAutoExtractStatus"></div>
+                            </div>
+                            <div class="tab-pane fade" id="rgbManualExtract" role="tabpanel" aria-labelledby="rgb-manual-tab">
+                                <!-- Manual extract content -->
+                                <!-- VI Selection -->
+                                <div class="form-group">
+                                    <label for="rgbViSelect">Vegetation Index:</label>
+                                    <select class="form-control" id="rgbViSelect"></select>
+                                </div>
+                                <!-- Plot Navigation -->
+                                <div class="form-group">
+                                    <label for="rgbPlotIndex">Plot Index:</label>
+                                    <input type="number" class="form-control" id="rgbPlotIndex" min="0">
+                                    <div class="btn-group mt-2">
+                                        <button class="btn btn-secondary" id="rgbPrevPlot">Previous</button>
+                                        <button class="btn btn-secondary" id="rgbNextPlot">Next</button>
+                                    </div>
+                                </div>
+                                <!-- Threshold Control -->
+                                <div class="form-group">
+                                    <label for="rgbThreshold">Threshold Value:</label>
+                                    <input type="range" class="form-control-range" id="rgbThreshold" min="0" max="255">
+                                    <span id="rgbThresholdValue">0</span>
+                                </div>
+                                <!-- Visualization Options -->
+                                <div class="form-group">
+                                    <div class="btn-group">
+                                        <button class="btn btn-primary" id="rgbHistogramBtn">Show Histogram</button>
+                                        <button class="btn btn-primary" id="rgbColorCompositeBtn">Show Color Composite</button>
+                                    </div>
+                                </div>
+                                <!-- Visualization Container -->
+                                <div id="rgbVisualizationContainer" class="mt-3"></div>
+                                <!-- Confirm Button -->
+                                <button class="btn btn-success mt-3" id="rgbConfirmExtraction">Confirm Extraction</button>
+                            </div>
+                        </div>
+                        <!-- Visualization Tabs -->
+                        <h3 class="subsection-title">Visualization</h3>
+                        <ul class="nav nav-tabs mt-4" id="rgbVisualizeTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active" id="rgb-hist-tab" data-bs-toggle="tab" data-bs-target="#rgbHistogram" role="tab" aria-controls="rgbHistogram" aria-selected="true">Histogram</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="rgb-cc-tab" data-bs-toggle="tab" data-bs-target="#rgbCC" role="tab" aria-controls="rgbCC" aria-selected="false">CC</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="rgb-shapefile-tab" data-bs-toggle="tab" data-bs-target="#rgbShapefile" role="tab" aria-controls="rgbShapefile" aria-selected="false">Shapefile</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="rgbVisualizeContent">
+                            <div class="tab-pane fade show active" id="rgbHistogram" role="tabpanel" aria-labelledby="rgb-hist-tab">
+                                <!-- RGB Histogram content -->
+                                <div class="form-group">
+                                    <label for="rgbHistPlotIndex" data-toggle="tooltip" title="Select which plot to analyze from your dataset. Each index represents a unique spatial area captured in your RGB imagery.">
+                                        Enter Plot Index:
+                                    </label>
+                                    <input type="number" id="rgbHistPlotIndex" min="0" max="{{ max_index }}" value="0" class="form-control">
+                                </div>
+                                <button type="button" class="btn btn-primary" id="rgbHistVisualizeBtn">Visualize Histogram</button>
+                                <div id="rgbHistVisualizationContainer" class="visualization-container"></div>
+                            </div>
+                            <div class="tab-pane fade" id="rgbCC" role="tabpanel" aria-labelledby="rgb-cc-tab">
+                                <!-- RGB CC content -->
+                                <div class="form-group">
+                                    <label for="rgbCCPlotIndex" data-toggle="tooltip" title="Select which plot to analyze from your dataset. Each index represents a unique spatial area captured in your RGB imagery.">
+                                        Enter Plot Index:
+                                    </label>
+                                    <input type="number" id="rgbCCPlotIndex" min="0" max="{{ max_index }}" value="0" class="form-control">
+                                </div>
+                                <button type="button" class="btn btn-primary" id="rgbCCVisualizeBtn">Visualize CC</button>
+                                <div id="rgbCCVisualizationContainer" class="visualization-container"></div>
+                            </div>
+                            <div class="tab-pane fade" id="rgbShapefile" role="tabpanel" aria-labelledby="rgb-shapefile-tab">
+                                <!-- RGB Shapefile content -->
+                                <button type="button" class="btn btn-primary" id="rgbShapefileVisualizeBtn" data-toggle="tooltip" title="Visualize the spatial distribution of plots in your RGB imagery using the uploaded shapefile.">Visualize Shapefile</button>
+                                <div id="rgbShapefileVisualizationContainer" class="visualization-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="msLayout" style="display: none;">
+                <!-- Multispectral Section -->
+                <h3 class="mt-5">Multispectral Image Processing</h3>
+                <hr>
+                <!-- MS Upload Section -->
+                <h4 class="mt-3">Upload Files</h4>
+                <div class="form-group">
+                    <label for="rBandLabel">Select R Band:</label>
+                    <input type="file" class="form-control-file" id="r_band" accept=".tif">
+                    <button type="button" class="btn btn-primary" id="rBandUploadBtn">Upload R Band</button>
+                    <span id="rBandUploadStatus"></span>
+                    <span id="rBandSpinner" class="spinner"></span>
+                </div>
+                <div class="form-group">
+                    <label for="gBandLabel">Select G Band:</label>
+                    <input type="file" class="form-control-file" id="g_band" accept=".tif">
+                    <button type="button" class="btn btn-primary" id="gBandUploadBtn">Upload G Band</button>
+                    <span id="gBandUploadStatus"></span>
+                    <span id="gBandSpinner" class="spinner"></span>
+                </div>
+                <div class="form-group">
+                    <label for="bBandLabel">Select B Band:</label>
+                    <input type="file" class="form-control-file" id="b_band" accept=".tif">
+                    <button type="button" class="btn btn-primary" id="bBandUploadBtn">Upload B Band</button>
+                    <span id="bBandUploadStatus"></span>
+                    <span id="bBandSpinner" class="spinner"></span>
+                </div> 
+                <div class="form-group">
+                    <label for="reBandLabel">Select Rededge Band:</label>
+                    <input type="file" class="form-control-file" id="re_band" accept=".tif">
+                    <button type="button" class="btn btn-primary" id="reBandUploadBtn">Upload RE Band</button>
+                    <span id="reBandUploadStatus"></span>
+                    <span id="reBandSpinner" class="spinner"></span>
+                </div>
+                <div class="form-group">
+                    <label for="nirBandLabel">Select NIR Band:</label>
+                    <input type="file" class="form-control-file" id="nir_band" accept=".tif">
+                    <button type="button" class="btn btn-primary" id="nirBandUploadBtn">Upload NIR Band</button>
+                    <span id="nirBandUploadStatus"></span>
+                    <span id="nirBandSpinner" class="spinner"></span>
+                </div>
+                <div class="form-group">
+                    <label for="msShapefileLabel">Select Shapefile Files:</label>
+                    <input type="file" class="form-control-file" id="msShapefile" accept=".shp,.shx,.dbf,.prj,.cpg,.sbn,.sbx" multiple>
+                    <button type="button" class="btn btn-primary" id="msShapefileUploadBtn">Upload Shapefile</button>
+                    <span id="msShapefileUploadStatus"></span>
+                    <span id="msShapefileSpinner" class="spinner"></span>
+                </div>                
+                <div class="form-group">
+                    <label>Retrieved Plot IDs:</label>
+                    <div class="scroll-box" id="msPlotIdsList"></div>
+                </div>
+                <div class="form-group">
+                    <label>Retrieved Geometries:</label>
+                    <div class="scroll-box" id="msGeometriesList"></div>
+                </div>
+                <!-- MS Clipping and Preview Section -->
+                <h4 class="mt-4">Image Clipping and Preview</h4>                
+                <div class="form-group mt-3">                    
+                    <div class="mt-3">
+                        <button type="button" 
+                                class="btn btn-primary" 
+                                id="msClipBtn" 
+                                data-bs-toggle="tooltip" 
+                                data-bs-placement="top" 
+                                title="Initializes data structures and clips multispectral bands for analysis">
+                            Process & Clip MS Bands
+                        </button>                      
+                        <button type="button" class="btn btn-primary" id="msPreviewBtn" disabled>Preview Clipped Images</button>
+                        <button type="button" class="btn btn-secondary" id="msClearPreviewBtn">Clear Preview</button>
+                        <button type="button" class="btn btn-success" id="msDownloadAllBtn">Download All</button>
+                        <div id="msClipStatus" class="mt-2"></div>
+                        <button class="btn btn-link" id="msCollapseBtn" disabled>
+                            <i class="fas fa-chevron-down"></i> <!-- Changed to down arrow when collapsed -->
+                        </button>
+                        <div id="msPreviewStatus" class="mt-2"></div>
+                        <!-- Progress bar for MS -->
+                        <div id="msPreviewProgress" class="progress mb-3" style="display: none;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                role="progressbar" 
+                                style="width: 0%" 
+                                aria-valuenow="0" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                            </div>
+                        </div>
+                        <!-- Collapsible section for MS Clipped Images -->
+                        <div id="msClippedImagesPreview" class="mt-3 collapse">
+                            <div id="msImageGrid" class="d-flex flex-wrap gap-3"></div>
+                        </div>
+                    </div>
+                </div>               
+                <!-- MS Dataset Section -->
+                <h4 class="mt-4">Dataset Creation</h4>
+                <div class="form-group mt-3">
+                    <span id="msDatasetStatus"></span>
+                    <div id="msSection" class="processing-section">
+                        <h3 class="subsection-title">Dataset Extraction</h3>
+                        <!-- MS Extract Tabs -->
+                        <ul class="nav nav-tabs" id="msExtractTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active" id="ms-auto-tab" data-bs-toggle="tab" data-bs-target="#msAutoExtract" role="tab" aria-controls="msAutoExtract" aria-selected="true">Auto Extract</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="ms-manual-tab" data-bs-toggle="tab" data-bs-target="#msManualExtract" role="tab" aria-controls="msManualExtract" aria-selected="false">Manual Extract</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="msExtractContent">
+                            <div class="tab-pane fade show active" id="msAutoExtract" role="tabpanel" aria-labelledby="ms-auto-tab">
+                                <!-- MS Auto extract content -->
+                                <button type="button" class="btn btn-primary" id="msAutoExtractBtn">Extract</button>
+                                <div id="msAutoExtractStatus"></div>
+                            </div>
+                            <div class="tab-pane fade" id="msManualExtract" role="tabpanel" aria-labelledby="ms-manual-tab">
+                                <!-- MS Manual extract content -->
+                                <!-- Band Selection -->
+                                <div class="form-group">
+                                    <label for="msBandSelect">Band Selection:</label>
+                                    <select class="form-control" id="msBandSelect">
+                                        <option value="red">Red</option>
+                                        <option value="green">Green</option>
+                                        <option value="blue">Blue</option>
+                                        <option value="rededge">RedEdge</option>
+                                        <option value="nir">NIR</option>
+                                    </select>
+                                </div>
+                                <!-- Plot Navigation -->
+                                <div class="form-group">
+                                    <label for="msPlotIndex">Plot Index:</label>
+                                    <input type="number" class="form-control" id="msPlotIndex" min="0">
+                                    <div class="btn-group mt-2">
+                                        <button class="btn btn-secondary" id="msPrevPlot">Previous</button>
+                                        <button class="btn btn-secondary" id="msNextPlot">Next</button>
+                                    </div>
+                                </div>
+                                <!-- Threshold Control -->
+                                <div class="form-group">
+                                    <label for="msThreshold">Threshold Value:</label>
+                                    <input type="range" class="form-control-range" id="msThreshold" min="0" max="255">
+                                    <span id="msThresholdValue">0</span>
+                                </div>
+                                <!-- Visualization Band Selection -->
+                                <div class="form-group">
+                                    <label for="msVisualBandSelect">Visualization Band:</label>
+                                    <select class="form-control" id="msVisualBandSelect">
+                                        <option value="red">Red</option>
+                                        <option value="green">Green</option>
+                                        <option value="blue">Blue</option>
+                                        <option value="rededge">RedEdge</option>
+                                        <option value="nir">NIR</option>
+                                    </select>
+                                </div>
+                                <!-- Visualization Options -->
+                                <div class="form-group">
+                                    <div class="btn-group">
+                                        <button class="btn btn-primary" id="msHistogramBtn">Show Histogram</button>
+                                        <button class="btn btn-primary" id="msColorCompositeBtn">Show Color Composite</button>
+                                    </div>
+                                </div>
+                                <!-- Visualization Container -->
+                                <div id="msVisualizationContainer" class="mt-3"></div>
+                                <!-- Confirm Button -->
+                                <button class="btn btn-success mt-3" id="msConfirmExtraction">Confirm Extraction</button>                          
+                            </div>
+                        </div>
+                        <h3 class="subsection-title">Visualization</h3>
+                        <!-- MS Visualization Tabs -->
+                        <ul class="nav nav-tabs mt-4" id="msVisualizeTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active" id="ms-hist-tab" data-bs-toggle="tab" data-bs-target="#msHistogram" role="tab" aria-controls="msHistogram" aria-selected="true">Histogram</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="ms-cc-tab" data-bs-toggle="tab" data-bs-target="#msCC" role="tab" aria-controls="msCC" aria-selected="false">CC</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="ms-shapefile-tab" data-bs-toggle="tab" data-bs-target="#msShapefile" role="tab" aria-controls="msShapefile" aria-selected="false">Shapefile</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="msVisualizeContent">
+                            <div class="tab-pane fade show active" id="msHistogram" role="tabpanel" aria-labelledby="ms-hist-tab">
+                                <!-- MS Histogram content -->
+                                <div class="form-group">
+                                    <label for="msHistPlotIndex" data-toggle="tooltip" title="Select which plot to analyze from your dataset. Each index represents a unique spatial area in your field.">
+                                        Enter Plot Index:
+                                    </label>
+                                    <input type="number" id="msHistPlotIndex" min="0" max="{{ max_index }}" value="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="msHistBandSelect" data-toggle="tooltip" title="Choose which spectral band to analyze. Different bands reveal various aspects of crop health and vegetation status.">
+                                        Select Band:
+                                    </label>
+                                    <select id="msHistBandSelect" class="form-control">
+                                        <option value="red">Red</option>
+                                        <option value="green">Green</option>
+                                        <option value="blue">Blue</option>
+                                        <option value="rededge">Red Edge</option>
+                                        <option value="nir" selected>NIR</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary" id="msHistVisualizeBtn">Visualize Histogram</button>
+                                <div id="msHistVisualizationContainer" class="visualization-container"></div>
+                            </div>
+                            <div class="tab-pane fade" id="msCC" role="tabpanel" aria-labelledby="ms-cc-tab">
+                                <!-- MS CC content -->
+                                <div class="form-group">
+                                    <label for="msCCPlotIndex" data-toggle="tooltip" title="Select which plot to analyze from your dataset. Each index represents a unique spatial area in your field.">
+                                        Enter Plot Index:
+                                    </label>
+                                    <input type="number" id="msCCPlotIndex" min="0" max="{{ max_index }}" value="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="msCCBandSelect" data-toggle="tooltip" title="Choose which spectral band to analyze. Different bands reveal various aspects of crop health and vegetation status.">
+                                        Select Band:
+                                    </label>
+                                    <select id="msCCBandSelect" class="form-control">
+                                        <option value="red">Red</option>
+                                        <option value="green">Green</option>
+                                        <option value="blue">Blue</option>
+                                        <option value="rededge">Red Edge</option>
+                                        <option value="nir" selected>NIR</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary" id="msCCVisualizeBtn">Visualize CC</button>
+                                <div id="msCCVisualizationContainer" class="visualization-container"></div>
+                            </div>
+                            <div class="tab-pane fade" id="msShapefile" role="tabpanel" aria-labelledby="ms-shapefile-tab">
+                                <!-- MS Shapefile content -->
+                                <button type="button" class="btn btn-primary" id="msShapefileVisualizeBtn" data-toggle="tooltip" title="Visualize the spatial distribution of plots in your multispectral imagery using the uploaded shapefile.">Visualize Shapefile</button>
+                                <div id="msShapefileVisualizationContainer" class="visualization-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CRS Mismatch Modal -->
+            <div class="modal fade" id="crsMismatchModal" tabindex="-1" role="dialog" aria-labelledby="crsMismatchModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="crsMismatchModalLabel">CRS Mismatch</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p id="crsMismatchMessage"></p>
+                            <p id="crsMismatchSuccessMessage" class="text-success"></p>
+                        </div>
+                        <div class="modal-footer">
+                            <div class="crs-mismatch">
+                                <button type="button" class="btn btn-primary" id="reprojectBtn">Reproject</button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            </div>
+                            <div class="crs-matched">
+                                <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="imageContainer"></div>
+            <div id="results"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Finally load application scripts -->
+<script src="{{ url_for('geoimaging.static', filename='geoimaging/geoimaging.js') }}"></script>
+<script src="{{ url_for('geoimaging.static', filename='geoimaging/image_processing.js') }}"></script>
+<script src="{{ url_for('geoimaging.static', filename='geoimaging/extract_data.js') }}"></script>
+<script src="{{ url_for('geoimaging.static', filename='geoimaging/hist_cc_shape_visual.js') }}"></script>
+

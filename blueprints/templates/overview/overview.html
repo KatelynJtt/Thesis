@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="{{ url_for('overview.static', filename='overview/overview.css') }}">
+
+<div id="overview-content">
+    {% if filename %}
+        <div class="overview-container">
+            <h2>Overview of {{ filename }}</h2>
+            
+            <!-- Dataset Summary Section -->
+            <div class="overview-section">
+                <div class="summary-section">
+                    <h3>Dataset Summary</h3>
+                    <div class="summary-stats">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Preview Section -->
+            <div class="overview-section">
+                <div class="preview-section">
+                    <h3>Data Preview</h3>
+                    <div class="sample-data">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column Analysis Section -->
+            <div class="overview-section">  
+                <div class="column-analysis">
+                    <h3>Column Analysis</h3>
+                    <select id="column-selector">
+                        <option value="All">All Columns</option>
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                    <div class="column-content-wrapper">
+                        <div id="column-details"></div>
+                        <div id="column-values" class="column-scroll"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="message-container">
+            <h3>Welcome to Overview</h3>
+            <p>Please select a CSV file from the source column or click 'ADD SOURCE' to upload a new file.</p>
+        </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="{{ url_for('overview.static', filename='overview/overview.js') }}"></script>

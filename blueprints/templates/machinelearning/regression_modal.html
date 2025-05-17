@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Regression</title>
+    <style>
+        .parameter-row { display: flex; ; width: 100%; justify-content: center;
+        }
+        .block { font-size: medium; flex: 1; padding: 5px; border: 1px solid #ccc;
+        }
+        .centered-heading { font-size: 1.2em; text-align: center; margin-top: 5px; margin-bottom: 5px;
+        }
+        .param-radio-group { font-size: 1em; display: flex; flex-direction: column; justify-content: center; gap: 5px; margin-top: 5px;
+        }
+        .model-params { display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+        }
+        .model-params label { font-size: 1em; display: flex; flex-direction: column; align-items: flex-start; text-align: left; width: 45%; margin-bottom: 5px;
+        }
+        .model-params input, .model-params select { font-size: .9em; align-self: flex-start; width: 80%;
+        }
+        .model-params select { width: auto;
+        }
+        .train-predict-block { display: flex; flex-wrap: wrap; justify-content: center;
+        }
+        #trainPredict { font-size: 1.2em; padding: 5px 10px;
+        }
+        .results-and-tables-container {
+            display: flex;
+            flex-direction: row;
+            min-height: 500px;
+            border: 1px solid #ccc;
+        }
+        .results-block {
+            flex: 2;
+            padding: 20px;
+            background-color: #3D3D3D;
+            border: 1px solid #ccc;
+            justify-content: center;
+        }
+        .results-block h3 {
+            color: #ffffff;
+            margin: 0;
+            padding-bottom: 5px;
+            font-size: 1.2em;
+            text-align: center;
+            border-bottom: 2px solid #ffffff;
+        }
+        .tables-block {
+            flex: 1;
+            justify-content: center;
+            padding: 10px;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+        }
+        .score-table {
+            width: 100%;
+            border-collapse: collapse;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .score-table caption {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            background-color: #3D3D3D;  /* Dark gray background */
+            color: #ffffff;  /* White text */
+            padding: 10px;  /* Add some padding for better appearance */
+        }
+        .score-table th, .score-table td {
+            border: 1px solid #3D3D3D;
+            padding: 8px;
+            text-align: center;
+        }
+        .score-table th {
+            font-size: 1em;
+            background-color: #f2f2f2;
+        }
+        .score-table td {
+            font-size: .9em;
+        }    
+        .button-row { display: flex; justify-content: space-around; 
+        }
+        .explanation-plot {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .plot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .close-plot {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .custom-dialog {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        .dialog-buttons {
+            margin-top: 20px;
+            text-align: right;
+        }
+        .dialog-buttons button {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h2 id="regressor">Regressor</h2>
+    </div>
+    <div class="parameter-row">
+        <div class="block">
+            <h3 class="centered-heading">Parameter Optimization Method</h3>
+            <div class="param-radio-group">
+                <label><input type="radio" name="search_method" value="none" checked> None</label>
+                <label><input type="radio" name="search_method" value="grid"> Grid Search</label>
+                <label><input type="radio" name="search_method" value="random"> Random Search</label>
+            </div>            
+        </div>
+        <div class="block">
+            <h3 class="centered-heading">Model Parameters</h3>
+            <div class="model-params">
+                <!--We will dynamically add parameter inputs here-->
+                <!--Depending on Search Method: default None-->
+            </div>
+        </div>
+        <div class="block train-predict-block">
+            <button id="trainPredict">Train and Predict</button>
+        </div>
+    </div>
+
+    <div class="results-and-tables-container">
+        <div class="results-block">
+            <h3>Results</h3>
+            <img class="result-plot" id="mainPlot" alt="Main Plot">
+            <img class="result-plot" id="additionalPlot1" alt="Additional Plot 1">
+            <img class="result-plot" id="additionalPlot2" alt="Additional Plot 2">
+        </div>
+        
+        <div class="tables-block">
+            <table id="trainScoreTable" class="score-table">
+                <caption>Train Score</caption>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                </tbody>
+            </table>
+            <table id="testScoreTable" class="score-table">
+                <caption>Test Score</caption>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                    <tr><td></td><td></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="block">
+        <div class="button-row">
+            <button id="explainShap">Explain with SHAP</button>
+            <button id="explainLime">Explain with LIME</button>
+            <button id="viewOptimalParams">View Optimal Parameters</button>
+            <button id="saveTrainedModel">Save Trained Model</button>
+            <button id="saveDisplayedResult">Save Displayed Result</button>
+            <button id="helpButton">Help</button>
+            <button id="closeButton">Close</button>
+        </div>
+    </div>
+    <div id="shapPlotContainer"></div>
+    <div id="limePlotContainer"></div>
+    <div id="bestParamsContainer" style="display: none;">
+        <h3>Optimal Parameters</h3>
+        <pre id="bestParams"></pre>
+    </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="{{ url_for('static', filename='ml_events.js') }}"></script>
+
+</body>
+</html>

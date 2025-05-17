@@ -1,0 +1,103 @@
+<link rel="stylesheet" href="{{ url_for('eda.static', filename='eda/eda.css') }}">
+
+<div id="eda-content" data-filename="{{ filename }}">
+    <div class="recommendations-section">
+        <h3>Data Preprocessing Recommendations</h3>
+        <ul id="recommendations-list"></ul>
+    </div>
+    
+    <div class="dataset-section">
+        <input type="checkbox" id="show-original-dataset" name="show-dataset" value="show-original-dataset">
+        <label for="show-original-dataset">Show Original Dataset</label>
+        <input type="checkbox" id="show-edited-dataset" name="show-dataset" value="show-edited-dataset" disabled>
+        <label for="show-edited-dataset">Show Edited Dataset</label>
+        <div id="original-dataset-display"></div>
+        <div id="edited-dataset-display"></div>
+    </div>    
+
+    <div id="analysis-overview" class="section">
+        <h2 class="section-heading">Analysis Overview</h2>
+        <div class="tooltip">ℹ️<span class="tooltiptext">This section provides an overview of your dataset analysis.</span></div>
+        <button id="analysis-overview-btn">Analysis Overview</button>
+        <input type="checkbox" id="show-analysis-overview" disabled>
+        <label for="show-analysis-overview">Show Analysis Overview</label>
+        <button class="save-btn">Save</button>
+        
+        <div id="analysis-overview-results" class="display-area" style="display: none;">
+            <div class="charts-container">
+                <div id="pie-charts" class="pie-charts-column">
+                    <div class="pie-chart">
+                        <h3>Missing Values Percentage</h3>
+                        <img id="missing-values-chart" src="" alt="Missing Values Pie Chart">
+                    </div>
+                    <div class="pie-chart">
+                        <h3>Outliers Percentage</h3>
+                        <img id="outliers-chart" src="" alt="Outliers Pie Chart">
+                    </div>
+                </div>
+                <div class="vif-chart-column">
+                    <div class="vif-chart">
+                        <h3>Variance Inflation Factor (VIF)</h3>
+                        <img id="vif-chart" src="" alt="VIF Chart">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="data-summary" class="section">
+        <h2 class="section-heading">Data Summary</h2>
+        <div class="tooltip">ℹ️<span class="tooltiptext">This section provides a summary of your dataset.</span></div>
+        <button class="save-btn">Save</button>
+        <div class="analysis-buttons">
+            <button id="dataset-info-btn">Dataset Information</button>
+            <button id="statistical-summary-btn">Statistical Summary</button>
+            <button id="missing-values-btn">Show Missing Values</button>
+            <button id="outliers-btn">Show Outliers</button>
+            <button id="vif-btn">Show VIF</button>
+        </div>
+        <div id="analysis-display-area" class="display-area"></div>
+    </div>
+
+    <div class="menu">
+        <button class="menu-item" data-target="analysis-overview">Overview</button>
+        <button class="menu-item" data-target="data-summary">Data Summary</button>
+        <button class="menu-item" data-target="univariate">Univariate</button>
+        <button class="menu-item" data-target="bivariate">Bivariate</button>
+        <button class="menu-item" data-target="multivariate">Multivariate</button>
+    </div>
+
+    <div id="univariate" class="section">
+        <h2 class="section-heading">Univariate Analysis</h2>
+        <div class="tooltip">ℹ️<span class="tooltiptext">Analyze the distribution of a single variable.</span></div>
+        <button class="save-btn">Save</button>
+        <select id="univariate-feature-select"></select>
+        <button id="univariate-analyze-btn">Analyze</button>
+        <div id="univariate-display-area" class="display-area"></div>
+    </div>
+    
+    <div id="bivariate" class="section">
+        <h2 class="section-heading">Bivariate Analysis</h2>
+        <div class="tooltip">ℹ️<span class="tooltiptext">Examine the relationship between two variables.</span></div>
+        <button class="save-btn">Save</button>
+        <select id="bivariate-feature-select-1"></select>
+        <select id="bivariate-feature-select-2"></select>
+        <button id="bivariate-analyze-btn">Analyze</button>
+        <div id="bivariate-display-area" class="display-area"></div>
+    </div>
+    
+    <div id="multivariate" class="section">
+        <h2 class="section-heading">Multivariate Analysis</h2>
+        <div class="tooltip">ℹ️<span class="tooltiptext">Analyze relationships among multiple variables simultaneously.</span></div>
+        <button class="save-btn">Save</button>
+        <div class="tooltip">
+            <select id="multivariate-feature-select" multiple></select>
+            <span class="tooltiptext">Hold Ctrl (Cmd on Mac) to select multiple features. It's recommended to keep selections under 10 for meaningful visualization and interpretation.</span>
+        </div>
+        <button id="multivariate-analyze-btn">Analyze</button>
+        <div id="multivariate-display-area" class="display-area"></div>
+    </div>
+</div>
+
+<script src="{{ url_for('eda.static', filename='eda/eda.js') }}"></script>
+

@@ -1,8 +1,40 @@
+# Core packages
+flask==2.0.1
+flask-cors==3.0.10
+flask-socketio==5.1.1
+werkzeug==2.0.1
 
-flask
-pandas
-sqlalchemy
-os
-matplotlib
-scikit-learn
-flask-cors
+# Data manipulation
+pandas==1.3.3
+numpy==1.21.2
+geopandas==0.10.2
+
+# Machine Learning
+scikit-learn==1.0
+xgboost==1.4.2
+lightgbm==3.2.1
+catboost==0.26.1
+statsmodels==0.13.0
+
+# Explainable AI
+shap==0.39.0
+lime==0.2.0.1
+
+# Visualization
+matplotlib==3.4.3
+seaborn==0.11.2
+
+# Geospatial
+rasterio==1.2.10
+
+# Progress tracking
+tqdm==4.62.3
+
+# Excel support
+openpyxl==3.0.9
+
+# Scientific computing
+scipy==1.7.1
+
+# Utilities
+joblib==1.1.0

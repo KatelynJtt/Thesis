@@ -1,0 +1,40 @@
+<!-- templates/plot_index_popup.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Plot Index Input</title>
+    <style>
+        .popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+        }
+
+        .popup input[type="number"] {
+            width: 80px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .popup button {
+            font-size: 16px;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="popup" id="plotIndexPopup">
+        <h3>Enter Plot Index</h3>
+        <input type="number" id="plotIndexInput" min="0" max="{{ max_index }}" value="0">
+        <button id="okBtn">OK</button>
+    </div>
+    <script src="{{ url_for('static', filename='geoimaging/hist_cc_shape_visual.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+#eda-content h1, #eda-content h2, #eda-content h3 {
+    color: #2c3e50;
+}
+
+#eda-content button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    margin: 5px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+#eda-content button:hover {
+    background-color: #2980b9;
+}
+
+#eda-content select, #eda-content input[type="file"] {
+    margin: 10px 0;
+    padding: 5px;
+}
+
+#eda-content .menu {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+#eda-content .section {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+#eda-content .display-area {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+}
+
+.charts-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.pie-charts-column {
+    width: 45%;
+    display: flex;
+    flex-direction: column;
+}
+
+.vif-chart-column {
+    width: 45%;
+}
+
+.pie-chart, .vif-chart {
+    margin-bottom: 20px;
+}
+
+.pie-chart img, .vif-chart img {
+    max-width: 100%;
+    height: auto;
+}
+

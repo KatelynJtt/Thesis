@@ -1,16 +1,18 @@
-import PySimpleGUI as sg
 import pandas as pd
 from pathlib import Path
 import numpy as np
+import io
+import base64
+import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from itertools import cycle
 import joblib
-import time
-import csv
 
-
-from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV, KFold,cross_val_score,learning_curve
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_curve, auc, classification_report, roc_auc_score, confusion_matrix
+from sklearn.model_selection import ShuffleSplit, GridSearchCV, RandomizedSearchCV,learning_curve, StratifiedKFold
 from sklearn.svm import SVR,LinearSVC,NuSVC,SVC
 from sklearn.linear_model import Ridge, Lasso, ElasticNet, BayesianRidge, SGDRegressor,LinearRegression,PassiveAggressiveClassifier,RidgeClassifier,SGDClassifier,LogisticRegression
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor,BaggingRegressor,VotingRegressor,StackingRegressor
@@ -25,20 +27,18 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.ensemble import AdaBoostClassifier,BaggingClassifier,GradientBoostingClassifier,RandomForestClassifier,StackingClassifier,VotingClassifier
 from sklearn.naive_bayes import BernoulliNB,GaussianNB
 
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, max_error, mean_absolute_percentage_error, classification_report, roc_curve,roc_auc_score,RocCurveDisplay,confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import root_mean_squared_error, r2_score, mean_absolute_error, max_error, mean_absolute_percentage_error, classification_report, roc_curve,roc_auc_score,RocCurveDisplay,confusion_matrix, ConfusionMatrixDisplay
 
 import shap
 import lime
 import lime.lime_tabular
 
-# button_mapping_reg = { '-BUTTON1-':'Linear Regression','-BUTTON2-':'Ridge', '-BUTTON3-':'Muliple Regression','-BUTTON4-':'Bayesian Ridge', '-BUTTON5-': 'ElasticNet',
-#                     '-BUTTON6-':'Polynomial Regression','-BUTTON7-':'Decision Tree','-BUTTON8-': 'SVM', '-BUTTON9-': 'K-nearest Neighbor', '-BUTTON10-': 'Neural Network',
-#                     '-BUTTON11-':'Gradient Boosting','-BUTTON12-':'Random Forest','-BUTTON13-': 'Bagging', '-BUTTON14-': 'AdaBoost' , '-BUTTON15-':'SGD' ,
-#                     '-BUTTON16-':'Voting','-BUTTON17-':'Stacking','-BUTTON18-': 'RunAll'
-#                     }
+import logging
 
-# button_mapping_cls = { '-BUTTON19-':'Decision Tree','-BUTTON20-': 'SVM', '-BUTTON21-': 'K-nearest Neighbor', '-BUTTON22-': 'Neural Network',
-#                     '-BUTTON23-':'Gradient Boosting','-BUTTON24-': 'RunAll'}
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+logging.getLogger('matplotlib.font_manager').setLevel(logging.ERROR)
+
 
 param_tips = {
             'SVR': {
@@ -230,16 +230,44 @@ param_tips = {
             }
             }
 
-regressor_dict = {'LinearRegression': LinearRegression(),'SVR': SVR(),'Ridge': Ridge(),'Lasso': Lasso(),'ElasticNet': ElasticNet(),'BayesianRidge': BayesianRidge(),'SGD': SGDRegressor(),'RandomForest': RandomForestRegressor(),
-                  'GradientBoosting': GradientBoostingRegressor(),'AdaBoost': AdaBoostRegressor(),'DecisionTree': DecisionTreeRegressor(),'KNN': KNeighborsRegressor(),'XGBoost': XGBRegressor(),
-                  'LightGBM': LGBMRegressor(),'CatBoost': CatBoostRegressor(),'MLPRegressor': MLPRegressor(),'RunAll':None}
+regressor_dict = {
+    'LinearRegression': LinearRegression,
+    'SVR': SVR,
+    'Ridge': Ridge,
+    'Lasso': Lasso,
+    'ElasticNet': ElasticNet,
+    'BayesianRidge': BayesianRidge,
+    'SGD': SGDRegressor,
+    'RandomForest': RandomForestRegressor,
+    'GradientBoosting': GradientBoostingRegressor,
+    'AdaBoost': AdaBoostRegressor,
+    'DecisionTree': DecisionTreeRegressor,
+    'KNN': KNeighborsRegressor,
+    'XGBoost': XGBRegressor,
+    'LightGBM': LGBMRegressor,
+    'CatBoost': CatBoostRegressor,
+    'MLPRegressor': MLPRegressor,
+    'RunAll': None
+}
 
-classifier_dict = {'AdaBoostClassifier': AdaBoostClassifier(),'BaggingClassifier': BaggingClassifier(),'BernoulliNB': BernoulliNB(),'DecisionTreeClassifier': DecisionTreeClassifier(),
-                #    'CalibratedClassifierCV': CalibratedClassifierCV(), 'ExtraTreeClassifier': ExtraTreeClassifier(), 'ExtraTreesClassifier': ExtraTreesClassifier(),
-                    'GaussianNB': GaussianNB(),'GradientBoostingClassifier': GradientBoostingClassifier(),'KNeighborsClassifier': KNeighborsClassifier(),'LogisticRegression': LogisticRegression(),
-                    'LinearSVC': LinearSVC(),'NuSVC': NuSVC(),'PassiveAggressiveClassifier': PassiveAggressiveClassifier(),'RandomForestClassifier': RandomForestClassifier(),'RidgeClassifier': RidgeClassifier(),
-                    'SGDClassifier': SGDClassifier(),'SVC': SVC(),'RunAll':None}
-
+classifier_dict = {
+    'AdaBoostClassifier': AdaBoostClassifier,
+    'BaggingClassifier': BaggingClassifier,
+    'BernoulliNB': BernoulliNB,
+    'DecisionTreeClassifier': DecisionTreeClassifier,
+    'GaussianNB': GaussianNB,
+    'GradientBoostingClassifier': GradientBoostingClassifier,
+    'KNeighborsClassifier': KNeighborsClassifier,
+    'LogisticRegression': LogisticRegression,
+    'LinearSVC': LinearSVC,
+    'NuSVC': NuSVC,
+    'PassiveAggressiveClassifier': PassiveAggressiveClassifier,
+    'RandomForestClassifier': RandomForestClassifier,
+    'RidgeClassifier': RidgeClassifier,
+    'SGDClassifier': SGDClassifier,
+    'SVC': SVC,
+    'RunAll': None
+}
 
 default_param_grids = {
             'SVR': {'C': [0.1, 1, 10, 100],'epsilon': [0.1, 0.2, 0.5, 1.0],'gamma': ['scale', 'auto', 1e-3, 1e-2, 1e-1, 1], 'kernel': ['linear', 'poly', 'rbf', 'sigmoid'] },
@@ -281,1360 +309,696 @@ default_param_grids = {
 
 metrics=['method','trained_time','R2','MAE','MSE','RMSE','MAX','MAPE']
 
-############### Canvas related functions used in windows ############
-def delete_figure_agg(figure_agg):
-    figure_agg.get_tk_widget().forget()
-    try:
-        draw_figure.canvas_packed.pop(figure_agg.get_tk_widget())
-    except Exception as e:
-        print(f'Error removing {figure_agg} from list', e)
-    plt.close('all')
+##### DISPLAY FUNCTIONS ########################################################################################################################################
+def delete_figure_agg(figure):
+    """
+    Close the given Matplotlib figure.
 
-def draw_figure(canvas, figure):
-    if not hasattr(draw_figure, 'canvas_packed'):
-        draw_figure.canvas_packed = {}
-    figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
-    figure_canvas_agg.draw()
-    widget = figure_canvas_agg.get_tk_widget()
-    if widget not in draw_figure.canvas_packed:
-        draw_figure.canvas_packed[widget] = figure
-        widget.pack(side='top', fill='both', expand=1)
-    return figure_canvas_agg
+    Args:
+        figure (matplotlib.figure.Figure): The Matplotlib figure to be closed.
+    """
+    plt.close(figure)
+
+def draw_figure(figure):
+    """
+    Convert a Matplotlib figure to a base64-encoded PNG image.
+
+    Args:
+        figure (matplotlib.figure.Figure): The Matplotlib figure to be converted.
+
+    Returns:
+        str: The base64-encoded PNG image.
+    """
+    img = io.BytesIO()
+    figure.savefig(img, format='png')
+    img.seek(0)
+    plot_url = base64.b64encode(img.getvalue()).decode()
+    return plot_url
 
 def plot_regression_result(y_test, y_pred):
-    plt.close('all')
-    # num_outputs = y_pred.shape[1]
-    # if num_outputs >1:
-    #     fig,axs = plt.subplots(num_outputs,1,figsize=(6,6))
-    #     label_name = y_test.columns
-    #     for i in range(num_outputs):
-    #         test = y_test.iloc[:,i]
-    #         test = test.values.reshape(-1,1)
-    #         pred = y_pred[:,i]
-    #         estimator = LinearRegression()
-    #         estimator.fit(test,pred)
-    #         y_pred1 = estimator.predict(test)
-    #         axs[i].scatter(test, pred,color='g')
-    #         axs[i].plot(test,y_pred1,color = 'r')
-    #         axs[i].set_xlabel("Test")
-    #         axs[i].set_ylabel("Predict")
-    #         axs[i].set_title(f'result for {label_name[i]}')
-    #     plt.tight_layout()
-    #     return fig
-    # else:
+    """
+    Plot the regression results using Matplotlib.
+
+    Args:
+        y_test (pandas.Series): The true labels for the test data.
+        y_pred (pandas.Series): The predicted labels for the test data.
+
+    Returns:
+        str: The base64-encoded PNG image of the plot.
+    """
+# Create a Matplotlib figure and axis
+    fig, ax = plt.subplots()
+    
+    # Plot the scatter plot
+    ax.scatter(y_test, y_pred, color='g', label='Predictions')
+    
+    # Fit a line to the points
     estimator = LinearRegression()
-    estimator.fit(y_test,y_pred)
-    y_pred1 = estimator.predict(y_test)
-    plt.scatter(y_test, y_pred,color='g')
-    plt.plot(y_test,y_pred1, color = 'r')
-    plt.xlabel("Test")
-    plt.ylabel("Predict")
-    fig = plt.gcf()  # get the figure to show
-    return fig
+    estimator.fit(y_test.values.reshape(-1, 1), y_pred)
+    y_pred_line = estimator.predict(y_test.values.reshape(-1, 1))
+    
+    # Plot the fitted line
+    ax.plot(y_test, y_pred_line, color='r', label='Fitted Line')
+    
+    # Set axis labels and title
+    ax.set_xlabel('True Values')
+    ax.set_ylabel('Predicted Values')
+    ax.set_title('Regression Results')
+    
+    # Add a legend
+    ax.legend()
+    
+    # Save the plot as a PNG image
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    plot_url = base64.b64encode(img.getvalue()).decode()
+    
+    # Close the figure to free up memory
+    plt.close(fig)
+    
+    return plot_url
 
-def explain_model_shap(model,model_name, X_train, X_test):
-    plt.close("all")
-    feature_names = X_test.columns
-    if model_name in ['DecisionTree','RandomForest','LightGBM','CatBoost','XGBoost']:
-        explainer = shap.TreeExplainer(model, X_train)
-    elif model_name in ['LinearRegression','LogicalRegression']:
-        explainer = shap.LinearExplainer(model.predict, X_train)
-    else:
-        explainer = shap.KernelExplainer(model.predict, X_train)
+def explain_model_shap(model_data, models, X_train, X_test, model_dict):
+    feature_names = X_train.columns.tolist()
+    is_classifier = any('Classifier' in model for model in models)
 
-    shap_values = explainer(X_test)
-    shap.summary_plot(shap_values, X_test,feature_names)
+    try:
+        # Use the trained model directly
+        model = joblib.load(model_data['model_path'])
+        model_name = models[0] if model_data['ensemble_method'] == 'none' else f"{model_data['ensemble_method']} Ensemble of {', '.join(models)}"
+        predict = lambda X: model.predict_proba(X) if is_classifier else model.predict(X)
 
-def explain_model_lime(model, X_train, X_test):
-    feature_name = X_train.columns
-    explainer = lime.lime_tabular.LimeTabularExplainer(X_train.values,feature_names=feature_name,verbose=True,mode='regression')
-    explanation = explainer.explain_instance(X_test.values[0], model.predict)
-    feature_importances = explanation.as_list()
-    features, importances= zip(*feature_importances)
-    plt.close('all')
-    plt.barh(features,importances)
-    plt.xlabel('Importance')
-    plt.title('LIME Feature Importances')
-    plt.ylabel('Features')
-    plt.gca().invert_yaxis()
-    plt.show()
-    # explanation.show_in_notebook(show_table=True)
+        if any(m in model_name for m in ['DecisionTree', 'RandomForest', 'LightGBM', 'CatBoost', 'XGBoost']):
+            explainer = shap.TreeExplainer(model)
+        elif any(m in model_name for m in ['LinearRegression', 'LogisticRegression']):
+            explainer = shap.LinearExplainer(model, X_train)
+        else:
+            explainer = shap.KernelExplainer(predict, X_train)
 
-def method_runall(X_train,X_test,y_train,y_test):
-    table_train= []
+        shap_values = explainer(X_test)
+
+        plt.figure(figsize=(12, 8))
+        shap.summary_plot(shap_values, X_test, plot_type="bar", feature_names=feature_names, show=False, max_display=20)
+        plt.title(f'SHAP Explanation for {model_name}')
+        plt.tight_layout()
+
+        img = io.BytesIO()
+        plt.savefig(img, format='png')
+        img.seek(0)
+        plot_url = base64.b64encode(img.getvalue()).decode()
+        plt.close()
+
+        return {'plot_url': plot_url}
+    except Exception as e:
+        print(f"Error in explain_model_shap: {str(e)}")
+        print(f"Error type: {type(e)}")
+        return {'error': str(e)}
+
+def explain_model_lime(model_data, models, X_train, X_test, model_dict):
+    feature_names = X_train.columns.tolist()
+    is_classifier = any('Classifier' in model for model in models)
+
+    try:
+        # Use the trained model directly
+        model = joblib.load(model_data['model_path'])
+        model_name = models[0] if model_data['ensemble_method'] == 'none' else f"{model_data['ensemble_method']} Ensemble of {', '.join(models)}"
+        predict = lambda X: model.predict_proba(X) if is_classifier else model.predict(X)
+
+        # Create LIME explainer
+        if is_classifier:
+            explainer = lime.lime_tabular.LimeTabularExplainer(
+                X_train.values,
+                feature_names=feature_names,
+                class_names=['class_' + str(i) for i in range(2)],
+                mode='classification'
+            )
+        else:
+            explainer = lime.lime_tabular.LimeTabularExplainer(
+                X_train.values,
+                feature_names=feature_names,
+                mode='regression'
+            )
+
+        # Generate explanation for first test instance
+        exp = explainer.explain_instance(
+            X_test.iloc[0].values, 
+            predict,
+            num_features=len(feature_names)
+        )
+
+        # Create plot
+        plt.figure(figsize=(12, 8))
+        exp.as_pyplot_figure()
+        plt.title(f'LIME Explanation for {model_name}')
+        plt.tight_layout()
+
+        img = io.BytesIO()
+        plt.savefig(img, format='png')
+        img.seek(0)
+        plot_url = base64.b64encode(img.getvalue()).decode()
+        plt.close()
+
+        return {'plot_url': plot_url}
+    except Exception as e:
+        print(f"Error in explain_model_lime: {str(e)}")
+        print(f"Error type: {type(e)}")
+        return {'error': str(e)}
+
+
+def calculate_scores(y_true, y_pred):
+    return [
+        ['R2', r2_score(y_true, y_pred)],
+        ['MSE', root_mean_squared_error(y_true, y_pred) ** 2],
+        ['MAE', mean_absolute_error(y_true, y_pred)],
+        ['MAX', max_error(y_true, y_pred)],
+        ['RMSE', root_mean_squared_error(y_true, y_pred)],
+        ['MAPE', mean_absolute_percentage_error(y_true, y_pred)]
+    ]
+
+def method_runall(X_train, X_test, y_train, y_test):
+    """
+    Run all regression models and generate visualizations for their performance metrics.
+
+    Args:
+        X_train (pandas.DataFrame): The training data features.
+        X_test (pandas.DataFrame): The test data features.
+        y_train (pandas.Series): The training data labels.
+        y_test (pandas.Series): The test data labels.
+
+    Returns:
+        tuple: A tuple containing two lists:
+            - table_test (list): A list of base64-encoded PNG images for test performance metrics.
+            - table_train (list): A list of base64-encoded PNG images for training performance metrics.
+    """
     table_test = []
+    table_train = []
 
-    for name,est in regressor_dict.items():
-        start_time = time.time()
-        print(name,est)
-        if est != None:
+    for name, est in regressor_dict.items():
+        if est is not None:
             est.fit(X_train, y_train)
-            estimated_time = time.time() - start_time
 
             y_test_pred = est.predict(X_test)
 
-            # calculate the metricx for test result
+            # Calculate the metrics for test result
             r2_test = r2_score(y_test, y_test_pred)
             MAE_test = mean_absolute_error(y_test, y_test_pred)
-            MSE_test =  mean_squared_error(y_test, y_test_pred)
-            RMSE_test = mean_squared_error(y_test, y_test_pred, squared=False)
+            MSE_test = root_mean_squared_error(y_test, y_test_pred) ** 2
+            RMSE_test = root_mean_squared_error(y_test, y_test_pred)
             MAX_test = max_error(y_test, y_test_pred)
-            MAPE_test =  mean_absolute_percentage_error(y_test,y_test_pred)
+            MAPE_test = mean_absolute_percentage_error(y_test, y_test_pred)
 
-            table_t =[name,estimated_time,r2_test,MAE_test,MSE_test,RMSE_test,MAX_test,MAPE_test]
-            table_test.append(table_t)
+            # Create a Matplotlib figure for the test performance metrics
+            fig, ax = plt.subplots(figsize=(8, 6))
+            metrics = ['R-squared', 'MAE', 'MSE', 'RMSE', 'MAX Error', 'MAPE']
+            values = [r2_test, MAE_test, MSE_test, RMSE_test, MAX_test, MAPE_test]
+            ax.bar(metrics, values)
+            ax.set_title(f'{name} - Test Performance Metrics')
+            ax.set_xlabel('Metric')
+            ax.set_ylabel('Value')
+
+            # Save the plot as a PNG image
+            img = io.BytesIO()
+            plt.savefig(img, format='png', bbox_inches='tight')
+            img.seek(0)
+            plot_url = base64.b64encode(img.getvalue()).decode()
+
+            # Close the figure to free up memory
+            plt.close(fig)
+
+            table_test.append(plot_url)
 
             y_train_pred = est.predict(X_train)
-            r2_train = r2_score(y_train,y_train_pred)
-            MAE_train = mean_absolute_error(y_train,y_train_pred)
-            MSE_train = mean_squared_error(y_train,y_train_pred)
-            RMSE_train = mean_squared_error(y_train,y_train_pred, squared=False)
-            MAX_train = max_error(y_train,y_train_pred)
-            MAPE_train = mean_absolute_percentage_error(y_train,y_train_pred)
-            table =[name,estimated_time,r2_train,MAE_train,MSE_train,RMSE_train,MAX_train,MAPE_train]
-            table_train.append(table)
+            r2_train = r2_score(y_train, y_train_pred)
+            MAE_train = mean_absolute_error(y_train, y_train_pred)
+            MSE_train = root_mean_squared_error(y_train, y_train_pred) ** 2
+            RMSE_train = root_mean_squared_error(y_train, y_train_pred)
+            MAX_train = max_error(y_train, y_train_pred)
+            MAPE_train = mean_absolute_percentage_error(y_train, y_train_pred)
 
-    return table_test,table_train
+            # Create a Matplotlib figure for the training performance metrics
+            fig, ax = plt.subplots(figsize=(8, 6))
+            metrics = ['R-squared', 'MAE', 'MSE', 'RMSE', 'MAX Error', 'MAPE']
+            values = [r2_train, MAE_train, MSE_train, RMSE_train, MAX_train, MAPE_train]
+            ax.bar(metrics, values)
+            ax.set_title(f'{name} - Training Performance Metrics')
+            ax.set_xlabel('Metric')
+            ax.set_ylabel('Value')
 
-# def setModel_singleML(regressor,param,search_method):
+            # Save the plot as a PNG image
+            img = io.BytesIO()
+            plt.savefig(img, format='png', bbox_inches='tight')
+            img.seek(0)
+            plot_url = base64.b64encode(img.getvalue()).decode()
 
-#     if search_method =='None':
-#         model = regressor_dict[regressor]
-#         model.set_params(**param)
-#     elif search_method == 'Grid':
-#         model = GridSearchCV(regressor_dict[regressor],param, cv=5)
-#     else:
-#         model == None
+            # Close the figure to free up memory
+            plt.close(fig)
 
-#     return model
+            table_train.append(plot_url)
 
-def create_param_input_fields(param_grid,search_method):
-    fields = []
-    if search_method == 0:
-        for param, default_values in param_grid.items():
-            if any(isinstance(item,str) for item in default_values):
-                fields.append([sg.Text(param,size=(5,1)),sg.Combo(values=default_values, default_value= default_values[0], key=f'-Param_None_{param}-')])
-            else:
-                fields.append([sg.Text(param,size=(5,1)),sg.Input( default_text = default_values[0], key=f'-Param_None_{param}-')])
+    return table_test, table_train
 
-    elif search_method==1:
-        for param, default_values in param_grid.items():
-            fields.append([sg.Text(param,size=(5,1)),sg.Input(', '.join(map(str, default_values)), key=f'-Param_Grid_{param}-')])
-    elif search_method==2:
-        for param, default_values in param_grid.items():
-            fields.append([sg.Text(param,size=(5,1)),sg.Input(', '.join(map(str, default_values)), key=f'-Param_Random_{param}-')])
-    return fields
+def generate_performance_metrics(y_true, y_pred, model_name, data_type):
+    metrics = []
 
-def singleML_None_search_layout(regressor):
-    param_grid = default_param_grids[regressor]
-    layout = create_param_input_fields(param_grid,0)
-    frame_catego = sg.pin(sg.Col(layout,expand_x=True, expand_y=True,visible=True,key='-COL_NONE-',pad =(0,0)),expand_x=True, expand_y=True, shrink=True)
+    r2 = r2_score(y_true, y_pred)
+    MAE = mean_absolute_error(y_true, y_pred)
+    MSE = root_mean_squared_error(y_true, y_pred) ** 2
+    RMSE = root_mean_squared_error(y_true, y_pred)
+    MAX = max_error(y_true, y_pred)
+    MAPE = mean_absolute_percentage_error(y_true, y_pred)
 
-    return frame_catego
+    metric_names = ['R-squared', 'MAE', 'MSE', 'RMSE', 'MAX Error', 'MAPE']
+    metric_values = [r2, MAE, MSE, RMSE, MAX, MAPE]
 
-def singleML_GridCV_search_layout(regressor):
-    param_grid = default_param_grids[regressor]
-    layout = create_param_input_fields(param_grid,1)
-    frame_catego = sg.pin(sg.Col(layout,expand_x=True, expand_y=True,visible=False,key='-COL_GRID-',pad =(0,0)),expand_x=True, expand_y=True, shrink=True)
-    return frame_catego
+    # Create the metrics list
+    metrics = list(zip(metric_names, metric_values))
 
-def singleML_RandomCV_search_layout(regressor):
-    param_grid = default_param_grids[regressor]
-    layout = create_param_input_fields(param_grid,2)
-    frame_catego = sg.pin(sg.Col(layout,expand_x=True, expand_y=True,visible=False,key='-COL_RANDOM-',pad =(0,0)),expand_x=True, expand_y=True, shrink=True)
-    return frame_catego
+    # Generate the plot
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(metric_names, metric_values)
+    ax.set_title(f'{model_name} - {data_type} Performance Metrics')
+    ax.set_xlabel('Metric')
+    ax.set_ylabel('Value')
 
-def singleML_window_regression(main_windows,event,X_train,X_test,y_train,y_test):
+    plot_buffer = io.BytesIO()
+    plt.savefig(plot_buffer, format='png')
+    plot_buffer.seek(0)
+    plot_url = base64.b64encode(plot_buffer.getvalue()).decode('utf-8')
+    plt.close(fig)
 
-    regressor = event
-    search_method ='None'
+    return {
+        'metrics': metrics,
+        'plot_url': plot_url
+    }
 
-    if regressor == 'RunAll':
-        table_test,table_train = method_runall(X_train,X_test,y_train,y_test)
-        table_layout_train =sg.Table(values=table_train,headings=metrics,auto_size_columns=True, hide_vertical_scroll=True, expand_x=True,expand_y=True,key='-TABLEALL-')
-        table_layout_test =sg.Table(values=table_test,headings=metrics,auto_size_columns=True, hide_vertical_scroll=True, expand_x=True,expand_y=True,key='-TABLEALLTEST-')
-        layout = [[sg.Column([[sg.Text('Train result')],[table_layout_train],[sg.Text('Test result')],[ table_layout_test],[sg.pin(sg.Column([[sg.Push(),sg.Button('Back',button_color='red',pad=(10,10)), sg.Button('Exit',button_color='red',pad=(10,10)),sg.Push()]],expand_x= True,pad =(0,0)),expand_x=True)]],expand_x=True,expand_y=True,key='-COLRUNALL-')]]
+def generate_classification_metrics(y_true, y_pred, model_name, data_type):
+    metrics = []
+
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, average='weighted', zero_division=0)
+    recall = recall_score(y_true, y_pred, average='weighted', zero_division=0)
+    f1 = f1_score(y_true, y_pred, average='weighted', zero_division=0)
+    
+    # AUC-ROC calculation
+    classes = np.unique(y_true)
+    n_classes = len(classes)
+
+    if n_classes == 2:
+        auc_roc = roc_auc_score(y_true, y_pred)
     else:
-        if event == 'LinearRegression':
-           layout = [[sg.pin(sg.Frame('',layout=[[sg.Button('Train and Predict', size=(20,2))]]))]]
+        y_true_bin = label_binarize(y_true, classes=classes)
+        y_pred_bin = label_binarize(y_pred, classes=classes)
+        auc_roc = roc_auc_score(y_true_bin, y_pred_bin, average='weighted', multi_class='ovr')
+
+    metric_names = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC-ROC']
+    metric_values = [accuracy, precision, recall, f1, auc_roc]
+
+    # Create the metrics list
+    metrics = list(zip(metric_names, metric_values))
+
+    # Generate the plot
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(metric_names[:4], metric_values[:4])  # Exclude AUC-ROC from the plot
+    ax.set_title(f'{model_name} - {data_type} Performance Metrics')
+    ax.set_xlabel('Metric')
+    ax.set_ylabel('Value')
+    ax.set_ylim(0, 1)  # Set y-axis limit from 0 to 1
+
+    plot_buffer = io.BytesIO()
+    plt.savefig(plot_buffer, format='png')
+    plot_buffer.seek(0)
+    plot_url = base64.b64encode(plot_buffer.getvalue()).decode('utf-8')
+    plt.close(fig)
+
+    return {
+        'metrics': metrics,
+        'plot_url': plot_url
+    }
+
+
+def singleML_regression(model_name, X_train, X_test, y_train, y_test, param_values, search_method):
+    logger.debug(f"Starting singleML_regression with model: {model_name}, search method: {search_method}")
+    logger.debug(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+    logger.debug(f"Param values: {param_values}")
+
+    try:
+        if model_name == 'LinearRegression':
+            est = regressor_dict[model_name]()
+            est.fit(X_train, y_train)
+            best_params = est.get_params()
         else:
+            param = {}
+            for key in default_param_grids[model_name].keys():
+                prefixed_key = f'{model_name}-{key}'
+                item = param_values.get(prefixed_key, '')
+                item = item.strip()
+                if item:
+                    try:
+                        item = [float(x) if '.' in x or 'e-' in x else int(x) for x in item.split(',')]
+                    except ValueError:
+                        item = item.split(',')
+                param[key] = item
+            
+            logger.debug(f"Processed parameters: {param}")
 
-            layout_none= singleML_None_search_layout(regressor)
-            layout_grid= singleML_GridCV_search_layout(regressor)
-            layout_random = singleML_RandomCV_search_layout(regressor)
-            layout = [[sg.Text('Parameter Optimization Method:'),sg.Radio('None', 'OPTIMIZATION_METHOD', key='-NONE_SEARCH-', enable_events=True, default=True),sg.Radio('Grid Search', 'OPTIMIZATION_METHOD', key='-GRID_SEARCH-',enable_events=True), sg.Radio('Random Search', 'OPTIMIZATION_METHOD', key='-RANDOM_SEARCH-',enable_events=True)]]
-            layout += [[sg.pin(sg.Frame('',layout=[[layout_none],[layout_grid],[layout_random]],expand_x=True, expand_y=True,pad=(0,0)),expand_x=True,expand_y=True,shrink=True),sg.Frame('',layout=[[sg.Button('Train and Predict', size=(20,2))]])]]
+            est = regressor_dict[model_name]()
 
-        layout +=[[ sg.Frame('',layout=[[
-                            sg.Column([[sg.Text('Result')],[sg.Canvas(key='-CANVAS-',size=(600,400),background_color='white')]],expand_x=True,expand_y=True),
-                            sg.Column([[sg.Text('Train Score')],[sg.Table(values=[],headings=['Metric', 'Score'],justification='left',auto_size_columns=True,hide_vertical_scroll=True, key='-TABLETRAIN-',expand_x=True)],
-                                        [sg.VPush()], [sg.Text('Test Score')],[sg.Table(values=[],headings=['Metric', 'Score'],justification='left',auto_size_columns=True, hide_vertical_scroll=True, expand_x=True,key='-TABLETEST-')],
-                                        ],expand_x=True,expand_y=True)]],
-                                        expand_x=True, expand_y=True,visible=True,key = '-CONTROL-')],
-                                        [sg.Frame('',layout=[[sg.pin(sg.Column([[sg.Button('Explain with SHAP'),sg.Button('Explain with LIME'), sg.Button('View Optimal Parameters'), sg.Button('Save Trained Model'),sg.Button('Save Displayed Result'),sg.Button('Help',button_color='red',pad=(10,10)),sg.Button('Back',button_color='red',pad=(10,10)), sg.Button('Exit',button_color='red',pad=(10,10)),sg.Push()]],expand_x= True,pad =(0,0)),expand_x=True)]])]]
-
-    window = sg.Window(f'{regressor}',layout=layout,finalize=True)
-    figure_agg = None
-    best_params = None
-    model_explain = None
-    is_saved = False
-
-    while True:
-        event,values = window.read()
-        print(event,values)
-
-        if event ==sg.WIN_CLOSED:
-            main_windows.un_hide()
-            break
-
-        if event == '-GRID_SEARCH-':
-            search_method = 'Grid'
-            window['-COL_NONE-'].update(visible = False)
-            window['-COL_RANDOM-'].update(visible = False)
-            window['-COL_GRID-'].update(visible = True)
-
-        if event =='-RANDOM_SEARCH-':
-            search_method = 'Random'
-            window['-COL_NONE-'].update(visible = False)
-            window['-COL_GRID-'].update(visible = False)
-            window['-COL_RANDOM-'].update(visible = True)
-
-        if event == '-NONE_SEARCH-':
-            search_method = 'None'
-            window['-COL_GRID-'].update(visible = False)
-            window['-COL_RANDOM-'].update(visible = False)
-            window['-COL_NONE-'].update(visible = True)
-
-        if event =='Train and Predict':
-            if figure_agg:
-                delete_figure_agg(figure_agg)
-
-            if event =='LinearRegression':
-                est = regressor_dict[regressor]
+            if search_method.lower() == 'none':
+                est.set_params(**{k: v[0] if isinstance(v, list) else v for k, v in param.items()})
                 est.fit(X_train, y_train)
-            else:
-                param ={}
-                if search_method == 'None':
-                    for key in default_param_grids[regressor].keys():
-                        item = values[f'-Param_None_{key}-']
-                        item = item.strip()
-                        if isinstance(item,int):
-                            item = int(item)
-                        else:
-                            try:
-                                if '.' in item or 'e-' in item:
-                                    item = float(item)
-                                else:
-                                    item = int(item)
-                            except ValueError:
-                                item = item
-                        param[key] = item
-                else:
-                    for key in default_param_grids[regressor].keys():
-                        new_values_str = values[f'-Param_Grid_{key}-']
-                        print(new_values_str)
-                        new_values_str = new_values_str.strip()
-                        new_list=[]
-                        if new_values_str.startswith('[') and new_values_str.endswith(']'):
-                            new_values_str= new_values_str.split('[')[1:]
-                            for  item in new_values_str:
-                                item_list = item.split(']')[0].split(',')
-                                input_list = [int(x.strip()) for x in item_list if x.strip()]
-                                new_list.append(input_list)
-                            print(new_list)
-                        else:
-                            for item in new_values_str.split(','):
-                                item = item.strip()
-                                try:
-                                    if '.' in item or 'e-' in item:
-                                        new_list.append(float(item))
-                                    else:
-                                        new_list.append(int(item))
-                                except ValueError:
-                                    new_list.append(item)
-                        param[key] = new_list
-
-                if search_method =='None':
-                    est = regressor_dict[regressor]
-                    est.set_params(**param)
-                elif search_method == 'Grid':
-                    est = GridSearchCV(regressor_dict[regressor],param, cv=5)
-                else:
-                    est == None
-
+                best_params = est.get_params()
+            elif search_method.lower() in ['grid', 'random']:
+                search_class = GridSearchCV if search_method.lower() == 'grid' else RandomizedSearchCV
+                est = search_class(regressor_dict[model_name](), param, cv=5)
                 est.fit(X_train, y_train)
-
-                if search_method !='None':
-                    best_params = est.best_params_
-                    est = est.best_estimator_
-                else:
-                    best_params = est.get_params()
-
-            model_explain = est
-            y_test_pred = est.predict(X_test)
-            y_train_pred = est.predict(X_train)
-            fig = plot_regression_result(y_test,y_test_pred)
-            figure_agg = draw_figure(window['-CANVAS-'].TKCanvas, fig)
-
-            train_score = [['R2', r2_score(y_train,y_train_pred)],
-                            ['MSE',mean_squared_error(y_train,y_train_pred)],
-                            ['MAE',mean_absolute_error(y_train,y_train_pred)],
-                            ['MAX',max_error(y_train,y_train_pred)],
-                            ['RMSE',mean_squared_error(y_train,y_train_pred, squared=False)],
-                            ['MAPE',mean_absolute_percentage_error(y_train,y_train_pred)]]
-
-            test_score =[['R2', r2_score(y_test,y_test_pred)],
-                        ['MSE',mean_squared_error(y_test,y_test_pred)],
-                        ['MAE',mean_absolute_error(y_test,y_test_pred)],
-                        ['MAX',max_error(y_test,y_test_pred)],
-                        ['RMSE',mean_squared_error(y_test, y_test_pred, squared=False)],
-                        ['MAPE',mean_absolute_percentage_error(y_test, y_test_pred)]]
-
-            window['-TABLETRAIN-'].update(values = train_score)
-            window['-TABLETEST-'].update(values = test_score)
-            window['-CONTROL-'].update(visible = True)
-
-        # save image.
-        if event == 'Save Trained Model':
-            is_saved = True
-
-            # save model to user_model dic.
-            filename = 'users_model/'+ f'{regressor}.joblib'
-            joblib.dump(est, filename)
-            sg.popup('Your model have been saved in Train-ML!')
-
-        if event == 'Save Displayed Result':
-            filepath =sg.popup_get_file('Open',no_window=True,save_as=True,file_types=[("PDF","*.pdf"),("PNG","*.png"),("JPG","*.jpg")])
-            if filepath:
-                fig.savefig(fname = filepath)
-                sg.popup('Your model have been saved in Train-ML!')
+                best_params = est.best_params_
+                est = est.best_estimator_
             else:
-                sg.popup_error('The filepath is invalid!')
-            filepath = sg.popup_get_file('Save as', no_window=True,save_as= True,default_extension='.csv')
-            if filepath:
-                with open(filepath,"w",newline="") as csvfile:
-                    csvwriter = csv.writer(csvfile)
-                    csvwriter.writerow(['Train result'])
-                    csvwriter.writerow(['Metric', 'Score'])
-                    for row in train_score:
-                        csvwriter.writerow(row)
-                    csvwriter.writerow(['Test result'])
-                    csvwriter.writerow(['Metric', 'Score'])
-                    for row in test_score:
-                        csvwriter.writerow(row)
+                logger.warning(f"Unrecognized search_method: {search_method}. Defaulting to 'None'.")
+                est.fit(X_train, y_train)
+                best_params = est.get_params()
+            
+        logger.debug("Model fitting completed")
 
-        if event == 'View Optimal Parameters':
-            sg.popup(f'Best Parameters:{best_params}')
+        y_test_pred = est.predict(X_test)
+        y_train_pred = est.predict(X_train)
 
-        if event == 'Explain with SHAP':
-            explain_model_shap(model_explain,regressor, X_train,X_test)
+        logger.debug("Predictions generated")
 
-        if event == 'Explain with LIME':
-            explain_model_lime(model_explain, X_train, X_test)
+        plot_url = plot_regression_result(y_test, y_test_pred)
+        train_results = generate_performance_metrics(y_train, y_train_pred, model_name, 'Training')
+        test_results = generate_performance_metrics(y_test, y_test_pred, model_name, 'Test')
 
-        if event == 'Help':
-            para_text = param_tips[regressor]
-            help_text = '\n\n'.join([f'{key}:{value}' for key,value in para_text.items()])
-            sg.popup_scrolled(help_text,title=f'Parameter Tips for {regressor}',text_color='blue')
+        return {
+            'model_name': model_name,
+            'plot_url': plot_url,
+            'train_metrics': train_results['metrics'],
+            'test_metrics': test_results['metrics'],
+            'train_metrics_plot': train_results['plot_url'],
+            'test_metrics_plot': test_results['plot_url'],
+            'best_params': best_params,
+            'model': est
+        }
 
-        if event == 'Back':
-            if is_saved == False:
-                is_yes = sg.popup('You do not save your model. Do you want to save your trained model first?',button_type=sg.POPUP_BUTTONS_YES_NO)
-                if is_yes == 'Yes':
-                    continue
-            window.close()
-            main_windows.un_hide()
-            main_windows['-NONE_ENSEMBLE-'].update(True)
+    except Exception as e:
+        logger.error(f"Error in singleML_regression: {str(e)}", exc_info=True)
+        raise
 
-        if event == 'Exit':
-            if is_saved == False:
-                is_yes = sg.popup('You do not save your model. Do you want to save your trained model first?',button_type=sg.POPUP_BUTTONS_YES_NO)
-                if is_yes == 'Yes':
-                    continue
+def ensembleML_regression(ensemble_method, regressors, X_train, X_test, y_train, y_test):
+    logging.debug(f"Starting ensembleML_regression with method: {ensemble_method}")
+    logging.debug(f"Regressors: {regressors}")
+    logging.debug(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
 
-            is_yes = sg.popup('Are you sure to exit the ML Module?',button_type=sg.POPUP_BUTTONS_YES_NO)
-            if is_yes == 'Yes':
-                window.close()
-                main_windows.close()
+    # Check the ensemble method
+    valid_methods = ['bagging', 'stacking', 'voting']
+    if ensemble_method not in valid_methods:
+        raise ValueError(f"Invalid ensemble method: {ensemble_method}. Must be one of {valid_methods}")
 
-    window.close()
+    # Check if regressors are valid
+    invalid_regressors = [reg for reg in regressors if reg not in regressor_dict]
+    if invalid_regressors:
+        raise ValueError(f"Invalid regressor(s): {invalid_regressors}. Must be one of {list(regressor_dict.keys())}")
 
-def ensembelML_window_regression(main_windows,event,para_list,X_train,X_test,y_train,y_test):
-    ensemble_method = event
-    model_list =[]
-    field =[]
-    figure_agg = None
-    is_saved = False
+    try:
+        if ensemble_method == 'bagging':
+            base_model = regressor_dict[regressors[0]]()
+            model = BaggingRegressor(estimator=base_model, n_estimators=10, random_state=0)
+        elif ensemble_method == 'stacking':
+            estimators = [(reg, regressor_dict[reg]()) for reg in regressors[:-1]]
+            final_estimator = regressor_dict[regressors[-1]]()
+            model = StackingRegressor(estimators=estimators, final_estimator=final_estimator, cv=10)
+        elif ensemble_method == 'voting':
+            estimators = [(reg, regressor_dict[reg]()) for reg in regressors]
+            model = VotingRegressor(estimators=estimators)
 
-    if ensemble_method == '-BAG-':
-        base_model = para_list[0][0]
-        base_model_param = para_list[0][1]
-        layout = [[sg.pin(sg.Frame('',layout=[[sg.Text(f'{base_model}'),sg.Text(f"{base_model_param}")]],expand_x=True, expand_y=True,pad=(0,0)),expand_x=True,expand_y=True,shrink=True),sg.Frame('',layout=[[sg.Button('Train and Predict', size=(20,2))]])]]
-        regressor = regressor_dict[base_model]
-        regressor.set_params(**base_model_param)
-        ensemble_model = BaggingRegressor(estimator=regressor,n_estimators=10, random_state=0)
-    elif ensemble_method =='-STACK-':
-        for i in range(len(para_list)):
-            base_model = para_list[i][0]
-            base_model_param = para_list[i][1]
-            field += [[sg.Text(f'{base_model}'),sg.Text(f"{base_model_param}")]]
-            regressor = regressor_dict[base_model]
-            regressor.set_params(**base_model_param)
-            model_list.append((base_model,regressor))
-        layout = [[sg.pin(sg.Frame('',layout=field,expand_x=True, expand_y=True,pad=(0,0)),expand_x=True,expand_y=True,shrink=True),sg.Frame('',layout=[[sg.Button('Train and Predict', size=(20,2))]])]]
-        ensemble_model = StackingRegressor(estimators=model_list[:-1],final_estimator=model_list[-1][1],cv=10)
-    elif ensemble_method == '-VOTE-':
-        for i in range(len(para_list)):
-            base_model = para_list[i][0]
-            base_model_param = para_list[i][1]
-            field += [[sg.Text(f'{base_model}'),sg.Text(f"{base_model_param}")]]
-            regressor = regressor_dict[base_model]
-            regressor.set_params(**base_model_param)
-            model_list.append((base_model,regressor))
-        layout = [[sg.pin(sg.Frame('',layout=field,expand_x=True, expand_y=True,pad=(0,0)),expand_x=True,expand_y=True,shrink=True),sg.Frame('',layout=[[sg.Button('Train and Predict', size=(20,2))]])]]
-        ensemble_model = VotingRegressor(estimators=model_list)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        y_train_pred = model.predict(X_train)
 
+        train_metrics = calculate_scores(y_train, y_train_pred)
+        test_metrics = calculate_scores(y_test, y_pred)
 
-    layout +=[[ sg.Frame('',layout=[[
-                sg.Column([[sg.Text('Result')],[sg.Canvas(key='-CANVAS-',size=(400,400),background_color='white')]],expand_x=True,expand_y=True),
-                sg.Column([[sg.Text('Train Score')],[sg.Table(values=[],headings=['Metric', 'Score'],auto_size_columns=True,hide_vertical_scroll=True, key='-TABLETRAIN-',expand_x=True)],
-                            [sg.VPush()], [sg.Text('Test Score')],[sg.Table(values=[],headings=['Metric', 'Score'],auto_size_columns=True, hide_vertical_scroll=True, expand_x=True,key='-TABLETEST-')],
-                            ],expand_x=True,expand_y=True)]],
-                            expand_x=True, expand_y=True,visible=True,key = '-CONTROL-')],
-                            [sg.Frame('',layout=[[sg.pin(sg.Column([[sg.Button('Explain with SHAP'),sg.Button('Explain with LIME'), sg.Button('View Optimal Parameter'), sg.Button('Save Trained Model'),sg.Button('Save Displayed Result'),sg.Button('Back',button_color='red',pad=(10,10)), sg.Button('Exit',button_color='red',pad=(10,10)),sg.Push()]],expand_x= True,pad =(0,0)),expand_x=True)]])]]
+        plot_url = plot_regression_result(y_test, y_pred)
+        train_metrics_plot = generate_performance_metrics(y_train, y_train_pred, ensemble_method, 'Train')
+        test_metrics_plot = generate_performance_metrics(y_test, y_pred, ensemble_method, 'Test')
 
-    window = sg.Window(f'{ensemble_method}',layout=layout)
-
-    while True:
-        event,values = window.read()
-
-        if event ==sg.WIN_CLOSED:
-            main_windows.un_hide()
-            break
-
-        if event =='Train and Predict':
-            if figure_agg:
-                delete_figure_agg(figure_agg)
-
-            ensemble_model.fit(X_train, y_train)
+        return {
+            'model': model,
+            'model_name': ensemble_method,
+            'train_metrics': train_metrics,
+            'test_metrics': test_metrics,
+            'plot_url': plot_url,
+            'train_metrics_plot': train_metrics_plot,
+            'test_metrics_plot': test_metrics_plot
+        }
+    except Exception as e:
+        logging.error(f"Error in ensembleML_regression: {str(e)}")
+        return {
+            'model': None,
+            'model_name': ensemble_method,
+            'train_metrics': [],
+            'test_metrics': [],
+            'plot_url': None,
+            'train_metrics_plot': None,
+            'test_metrics_plot': None,
+            'error': str(e)
+        }
 
 
-            model_explain = ensemble_model
-            y_test_pred = ensemble_model.predict(X_test)
-            y_train_pred = ensemble_model.predict(X_train)
-            fig = plot_regression_result(y_test,y_test_pred)
-            figure_agg = draw_figure(window['-CANVAS-'].TKCanvas, fig)
+def singleML_classification(model_name, X_train, X_test, y_train, y_test, param_values, search_method):
+    logger.debug(f"Starting singleML_classification with model: {model_name}, search method: {search_method}")
+    logger.debug(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+    logger.debug(f"Param values: {param_values}")
 
-            train_score = [['R2', r2_score(y_train,y_train_pred)],
-                            ['MSE',mean_squared_error(y_train,y_train_pred)],
-                            ['MAE',mean_absolute_error(y_train,y_train_pred)],
-                            ['MAX',max_error(y_train,y_train_pred)],
-                            ['RMSE',mean_squared_error(y_train,y_train_pred, squared=False)],
-                            ['MAPE',mean_absolute_percentage_error(y_train,y_train_pred)]]
+    try:
+        if model_name == 'LogisticRegression':
+            est = classifier_dict[model_name]()
+            est.fit(X_train, y_train)
+            best_params = est.get_params()
+        else:
+            param = {}
+            for key in default_param_grids[model_name].keys():
+                prefixed_key = f'{model_name}-{key}'
+                item = param_values.get(prefixed_key, '')
+                item = item.strip()
+                if item:
+                    try:
+                        item = [float(x) if '.' in x or 'e-' in x else int(x) for x in item.split(',')]
+                    except ValueError:
+                        item = item.split(',')
+                param[key] = item
+            
+            logger.debug(f"Processed parameters: {param}")
 
-            test_score =[['R2', r2_score(y_test,y_test_pred)],
-                        ['MSE',mean_squared_error(y_test,y_test_pred)],
-                        ['MAE',mean_absolute_error(y_test,y_test_pred)],
-                        ['MAX',max_error(y_test,y_test_pred)],
-                        ['RMSE',mean_squared_error(y_test, y_test_pred, squared=False)],
-                        ['MAPE',mean_absolute_percentage_error(y_test, y_test_pred)]]
+            est = classifier_dict[model_name]()
 
-            window['-TABLETRAIN-'].update(values=train_score)
-            window['-TABLETEST-'].update(values=test_score)
-            window['-CONTROL-'].update(visible=True)
-
-        if event == 'Save Trained Model':
-            is_saved = True
-
-            # save model to user_model dic.
-            filename = 'users_model/'+ f'{regressor}.joblib'
-            joblib.dump(ensemble_model, filename)
-            sg.popup('Your model have been saved in Train-ML!')
-
-        if event == 'Save Displayed Result':
-            filepath =sg.popup_get_file('Open',no_window=True,save_as=True,file_types=[("PDF","*.pdf"),("PNG","*.png"),("JPG","*.jpg")])
-            if filepath:
-                fig.savefig(fname = filepath)
-                sg.popup('Your model have been saved in Train-ML!')
+            if search_method.lower() == 'none':
+                est.set_params(**{k: v[0] if isinstance(v, list) else v for k, v in param.items()})
+                est.fit(X_train, y_train)
+                best_params = est.get_params()
+            elif search_method.lower() in ['grid', 'random']:
+                search_class = GridSearchCV if search_method.lower() == 'grid' else RandomizedSearchCV
+                est = search_class(classifier_dict[model_name](), param, cv=5)
+                est.fit(X_train, y_train)
+                best_params = est.best_params_
+                est = est.best_estimator_
             else:
-                sg.popup_error('The filepath is invalid!')
-            filepath = sg.popup_get_file('Save as', no_window=True,save_as= True,default_extension='.csv')
-            if filepath:
-                with open(filepath,"w",newline="") as csvfile:
-                    csvwriter = csv.writer(csvfile)
-                    csvwriter.writerow(['Train result'])
-                    csvwriter.writerow(['Metric', 'Score'])
-                    for row in train_score:
-                        csvwriter.writerow(row)
-                    csvwriter.writerow(['Test result'])
-                    csvwriter.writerow(['Metric', 'Score'])
-                    for row in test_score:
-                        csvwriter.writerow(row)
+                logger.warning(f"Unrecognized search_method: {search_method}. Defaulting to 'None'.")
+                est.fit(X_train, y_train)
+                best_params = est.get_params()
+            
+        logger.debug("Model fitting completed")
 
-        if event == 'View Optimal Parameter':
-            param_text = '\n\n'.join(f'{item}' for item in para_list)
-            # help_text = '\n\n'.join([f'{key}:{value}' for key,value in para_list.items()])
-            sg.popup_scrolled(param_text,title=f'Parameter Tips for {regressor}',text_color='blue')
-            # sg.popup(f'Best Parameters:{para_list}')
+        y_test_pred = est.predict(X_test)
+        y_train_pred = est.predict(X_train)
 
-        if event == 'Explain with SHAP':
-            explain_model_shap(model_explain,regressor, X_train,X_test)
+        train_results = generate_classification_metrics(y_train, y_train_pred, model_name, 'Training')
+        test_results = generate_classification_metrics(y_test, y_test_pred, model_name, 'Test')
 
-        if event == 'Explain with LIME':
-            explain_model_lime(model_explain, X_train, X_test)
+        classification_report = plot_classification_report(y_test, y_test_pred)
+        cm_plot = plot_confusion_matrix(y_test, y_test_pred, est)
+        roc_plot = plot_roc_curve(est, X_test, y_test)
+        learning_curve_plot = plot_learning_curve(est, X_train, y_train)
 
-        if event == 'Help':
-            para_text = param_tips[regressor]
-            help_text = '\n\n'.join([f'{key}:{value}' for key,value in para_text.items()])
-            sg.popup_scrolled(help_text,title=f'Parameter Tips for {regressor}',text_color='blue')
+        cm_plot_url = draw_figure(cm_plot)
+        roc_plot_url = draw_figure(roc_plot)
+        learning_curve_url = draw_figure(learning_curve_plot)
 
-        if event == 'Back':
-            if is_saved == False:
-                is_yes = sg.popup('You do not save your model. Do you want to save your trained model first?',button_type=sg.POPUP_BUTTONS_YES_NO)
-                if is_yes == 'Yes':
-                    continue
-            window.close()
-            main_windows.un_hide()
-            main_windows['-NONE_ENSEMBLE-'].update(True)
+        return {
+            'model_name': model_name,
+            'train_metrics': train_results['metrics'],
+            'test_metrics': test_results['metrics'],
+            'train_metrics_plot': train_results['plot_url'],
+            'test_metrics_plot': test_results['plot_url'],
+            'classification_report': classification_report,
+            'confusion_matrix_plot': cm_plot_url,
+            'roc_curve_plot': roc_plot_url,
+            'learning_curve_plot': learning_curve_url,
+            'best_params': best_params,
+            'model': est
+        }
 
-        if event == 'Exit':
-            if is_saved == False:
-                is_yes = sg.popup('You do not save your model. Do you want to save your trained model first?',button_type=sg.POPUP_BUTTONS_YES_NO)
-                if is_yes == 'Yes':
-                    continue
+    except Exception as e:
+        logger.error(f"Error in singleML_classification: {str(e)}", exc_info=True)
+        raise
 
-            is_yes = sg.popup('Are you sure to exit the ML Module?',button_type=sg.POPUP_BUTTONS_YES_NO)
-            if is_yes == 'Yes':
-                window.close()
-                main_windows.close()
+def ensembleML_classification(ensemble_method, classifiers, X_train, X_test, y_train, y_test):
+    logger.debug(f"Starting ensembleML_classification with method: {ensemble_method}")
+    logger.debug(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
 
-    window.close()
+    try:
+        if ensemble_method == 'Bagging':
+            base_model = classifier_dict[classifiers[0]]()
+            model = BaggingClassifier(estimator=base_model, n_estimators=10, random_state=0)
+        elif ensemble_method == 'Stacking':
+            estimators = [(clf, classifier_dict[clf]()) for clf in classifiers[:-1]]
+            final_estimator = classifier_dict[classifiers[-1]]()
+            model = StackingClassifier(estimators=estimators, final_estimator=final_estimator, cv=10)
+        elif ensemble_method == 'Voting':
+            estimators = [(clf, classifier_dict[clf]()) for clf in classifiers]
+            model = VotingClassifier(estimators=estimators)
+        else:
+            raise ValueError(f"Unsupported ensemble method: {ensemble_method}")
 
-def singleML_window_classification(main_windows,event,X_train,X_test,y_train,y_test):
+        model.fit(X_train, y_train)
+        logger.debug("Model fitting completed")
 
-    classfier = event
-    search_method ='None'
+        y_test_pred = model.predict(X_test)
+        y_train_pred = model.predict(X_train)
 
-    if classfier == 'RunAll':
-        table_test,table_train = method_runall(X_train,X_test,y_train,y_test)
-        table_layout_train =sg.Table(values=table_train,headings=metrics,auto_size_columns=True, hide_vertical_scroll=True, expand_x=True,expand_y=True,key='-TABLEALL-')
-        table_layout_test =sg.Table(values=table_test,headings=metrics,auto_size_columns=True, hide_vertical_scroll=True, expand_x=True,expand_y=True,key='-TABLEALLTEST-')
-        layout = [[sg.Column([[sg.Text('Train result')],[table_layout_train],[sg.Text('Test result')],[ table_layout_test],[sg.pin(sg.Column([[sg.Push(),sg.Button('Back',button_color='red',pad=(10,10)), sg.Button('Exit',button_color='red',pad=(10,10)),sg.Push()]],expand_x= True,pad =(0,0)),expand_x=True)]],expand_x=True,expand_y=True,key='-COLRUNALL-')]]
+        train_results = generate_classification_metrics(y_train, y_train_pred, ensemble_method, 'Training')
+        test_results = generate_classification_metrics(y_test, y_test_pred, ensemble_method, 'Test')
+
+        classification_report = plot_classification_report(y_test, y_test_pred)
+        cm_plot = plot_confusion_matrix(y_test, y_test_pred, model)
+        roc_plot = plot_roc_curve(model, X_test, y_test) if len(np.unique(y_test)) == 2 else None
+        learning_curve_plot = plot_learning_curve(model, X_train, y_train)
+
+        cm_plot_url = draw_figure(cm_plot)
+        roc_plot_url = draw_figure(roc_plot) if roc_plot else None
+        learning_curve_url = draw_figure(learning_curve_plot)
+
+        return {
+            'model_name': ensemble_method,
+            'train_metrics': train_results['metrics'],
+            'test_metrics': test_results['metrics'],
+            'train_metrics_plot': train_results['plot_url'],
+            'test_metrics_plot': test_results['plot_url'],
+            'classification_report': classification_report,
+            'confusion_matrix_plot': cm_plot_url,
+            'roc_curve_plot': roc_plot_url,
+            'learning_curve_plot': learning_curve_url,
+            'model': model
+        }
+
+    except Exception as e:
+        logger.error(f"Error in ensembleML_classification: {str(e)}", exc_info=True)
+        raise
+
+def calculate_classification_metrics(y_true, y_pred):
+    return {
+        'accuracy': accuracy_score(y_true, y_pred),
+        'precision': precision_score(y_true, y_pred, average='weighted', zero_division=0),
+        'recall': recall_score(y_true, y_pred, average='weighted', zero_division=0),
+        'f1': f1_score(y_true, y_pred, average='weighted', zero_division=0)
+    }
+
+def plot_classification_report(y_test, y_pred):
+    report = classification_report(y_test, y_pred)
+    return report
+
+def plot_roc_curve(model, X_test, y_test):
+    classes = np.unique(y_test)
+    n_classes = len(classes)
+    
+    if n_classes == 2:
+        y_score = model.predict_proba(X_test)[:, 1]
+        fpr, tpr, _ = roc_curve(y_test, y_score)
+        roc_auc = auc(fpr, tpr)
+        
+        fig, ax = plt.subplots()
+        ax.plot(fpr, tpr, label=f'ROC curve (AUC = {roc_auc:.2f})')
     else:
-        layout = [[sg.Text('Parameter Optimization Method:'),sg.Radio('None', 'OPTIMIZATION_METHOD', key='-NONE_SEARCH-', enable_events=True, default=True),sg.Radio('Grid Search', 'OPTIMIZATION_METHOD', key='-GRID_SEARCH-',enable_events=True), sg.Radio('Random Search', 'OPTIMIZATION_METHOD', key='-RANDOM_SEARCH-',enable_events=True)]]
-        layout_none= singleML_None_search_layout(classfier)
-        layout_grid= singleML_GridCV_search_layout(classfier)
-        layout_random = singleML_RandomCV_search_layout(classfier)
+        y_test_bin = label_binarize(y_test, classes=classes)
+        y_score = model.predict_proba(X_test)
+        
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        for i in range(n_classes):
+            fpr[i], tpr[i], _ = roc_curve(y_test_bin[:, i], y_score[:, i])
+            roc_auc[i] = auc(fpr[i], tpr[i])
+        
+        fig, ax = plt.subplots(figsize=(10, 8))
+        for i, color in zip(range(n_classes), cycle(['aqua', 'darkorange', 'cornflowerblue'])):
+            ax.plot(fpr[i], tpr[i], color=color, lw=2,
+                     label=f'ROC curve of class {i} (AUC = {roc_auc[i]:.2f})')
+    
+    ax.plot([0, 1], [0, 1], 'k--')
+    ax.set_xlim([0.0, 1.0])
+    ax.set_ylim([0.0, 1.05])
+    ax.set_xlabel('False Positive Rate')
+    ax.set_ylabel('True Positive Rate')
+    ax.set_title('Receiver Operating Characteristic (ROC) Curve')
+    ax.legend(loc="lower right", bbox_to_anchor=(1.25, 0))
+    fig.tight_layout()
+    
+    return fig
+
+def plot_confusion_matrix(y_test, y_pred, model):
+    cm = confusion_matrix(y_test, y_pred)
+    unique_labels = np.unique(np.concatenate((y_test, y_pred)))
+    n_classes = len(unique_labels)
+    
+    fig, ax = plt.subplots(figsize=(max(6, n_classes/2), max(5, n_classes/2)))
+    im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    ax.figure.colorbar(im, ax=ax)
+    
+    ax.set(xticks=np.arange(n_classes),
+           yticks=np.arange(n_classes),
+           xticklabels=unique_labels, 
+           yticklabels=unique_labels,
+           ylabel='True label',
+           xlabel='Predicted label')
+
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(j, i, format(cm[i, j], 'd'),
+                    ha="center", va="center",
+                    color="white" if cm[i, j] > cm.max() / 2. else "black")
+
+    fig.tight_layout()
+    plt.title('Confusion Matrix')
+    return fig
+
+def plot_learning_curve(model, X_train, y_train):
+    train_sizes = np.linspace(0.1, 1.0, 5)
+    n_samples = X_train.shape[0]
+    cv = ShuffleSplit(n_splits=min(5, n_samples // 2), test_size=0.2, random_state=42)
+    
+    train_sizes, train_scores, valid_scores = learning_curve(
+        model, X_train, y_train, train_sizes=train_sizes, cv=cv, n_jobs=-1
+    )
+    
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    valid_scores_mean = np.mean(valid_scores, axis=1)
+    valid_scores_std = np.std(valid_scores, axis=1)
+
+    fig, ax = plt.subplots()
+    ax.set_xlabel("Training examples")
+    ax.set_ylabel("Score")
+    ax.grid()
+    ax.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                    train_scores_mean + train_scores_std, alpha=0.1, color="r")
+    ax.fill_between(train_sizes, valid_scores_mean - valid_scores_std,
+                    valid_scores_mean + valid_scores_std, alpha=0.1, color="g")
+    ax.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Training score")
+    ax.plot(train_sizes, valid_scores_mean, 'o-', color="g", label="Cross-validation score")
+    ax.legend(loc="best")
+    
+    return fig
 
-        layout += [[sg.pin(sg.Frame('',layout=[[layout_none],[layout_grid],[layout_random]],expand_x=True, expand_y=True,pad=(0,0)),expand_x=True,expand_y=True,shrink=True),sg.Frame('',layout=[[sg.Button('Train and Predict', size=(20,2))]])]]
-        layout +=[[ sg.Frame('',layout=[[
-                            sg.Column([[sg.Text('Result')],[sg.Canvas(key='-CANVAS-',size=(600,400),background_color='white')]],expand_x=True,expand_y=True),
-                            sg.Column([[sg.Text('Train Score')],[sg.Table(values=[],headings=['Metric', 'Score'],justification='left',auto_size_columns=True,hide_vertical_scroll=True, key='-TABLETRAIN-',expand_x=True)],
-                                        [sg.VPush()], [sg.Text('Test Score')],[sg.Table(values=[],headings=['Metric', 'Score'],justification='left',auto_size_columns=True, hide_vertical_scroll=True, expand_x=True,key='-TABLETEST-')],
-                                        ],expand_x=True,expand_y=True)]],
-                                        expand_x=True, expand_y=True,visible=True,key = '-CONTROL-')],
-                                        [sg.Frame('',layout=[[sg.pin(sg.Column([[sg.Button('Explain with SHAP'),sg.Button('Explain with LIME'), sg.Button('View Optimal Parameters'), sg.Button('Save Trained Model'),sg.Button('Save Displayed Result'),sg.Button('Help',button_color='red',pad=(10,10)),sg.Button('Back',button_color='red',pad=(10,10)), sg.Button('Exit',button_color='red',pad=(10,10)),sg.Push()]],expand_x= True,pad =(0,0)),expand_x=True)]])]]
-
-    window = sg.Window(f'{classfier}',layout=layout,finalize=True)
-    figure_agg = None
-    best_params = None
-    model_explain = None
-    is_saved = False
-
-    while True:
-        event,values = window.read()
-        print(event,values)
-
-        if event ==sg.WIN_CLOSED:
-            main_windows.un_hide()
-            break
-
-        if event == '-GRID_SEARCH-':
-            search_method = 'Grid'
-            window['-COL_NONE-'].update(visible = False)
-            window['-COL_RANDOM-'].update(visible = False)
-            window['-COL_GRID-'].update(visible = True)
-
-        if event =='-RANDOM_SEARCH-':
-            search_method = 'Random'
-            window['-COL_NONE-'].update(visible = False)
-            window['-COL_GRID-'].update(visible = False)
-            window['-COL_RANDOM-'].update(visible = True)
-
-        if event == '-NONE_SEARCH-':
-            search_method = 'None'
-            window['-COL_GRID-'].update(visible = False)
-            window['-COL_RANDOM-'].update(visible = False)
-            window['-COL_NONE-'].update(visible = True)
-
-        if event =='Train and Predict':
-            if figure_agg:
-                delete_figure_agg(figure_agg)
-
-            param ={}
-            if search_method == 'None':
-                for key in default_param_grids[classfier].keys():
-                    item = values[f'-Param_None_{key}-']
-                    item = item.strip()
-                    if isinstance(item,int):
-                        item = int(item)
-                    else:
-                        try:
-                            if '.' in item or 'e-' in item:
-                                item = float(item)
-                            else:
-                                item = int(item)
-                        except ValueError:
-                            item = item
-                    param[key] = item
-            else:
-                for key in default_param_grids[classfier].keys():
-                    new_values_str = values[f'-Param_Grid_{key}-']
-                    new_values_str = new_values_str.strip()
-                    new_list=[]
-                    if new_values_str.startswith('[') and new_values_str.endswith(']'):
-                        new_values_str= new_values_str.split('[')[1:]
-                        for  item in new_values_str:
-                            item_list = item.split(']')[0].split(',')
-                            input_list = [int(x.strip()) for x in item_list if x.strip()]
-                            new_list.append(input_list)
-                    else:
-                        for item in new_values_str.split(','):
-                            item = item.strip()
-                            try:
-                                if '.' in item or 'e-' in item:
-                                    new_list.append(float(item))
-                                else:
-                                    new_list.append(int(item))
-                            except ValueError:
-                                new_list.append(item)
-                    param[key] = new_list
-
-            if search_method =='None':
-                clf = classifier_dict[classfier]
-                clf.set_params(**param)
-            elif search_method == 'Grid':
-                clf = GridSearchCV(classifier_dict[classfier],param, cv=5)
-            else:
-                clf == None
-
-            clf.fit(X_train, y_train)
-
-            if search_method !='None':
-                best_params = clf.best_params_
-                clf = clf.best_estimator_
-            else:
-                best_params = clf.get_params()
-
-            model_explain = clf
-            y_test_pred = clf.predict(X_test)
-            report = classification_report(y_test,y_test_pred)
-            sg.popup(report)
-
-            y_score = clf.decision_function(X_test)
-            fpr, tpr,_ = roc_curve(y_test,y_score,pos_label=2)
-
-            roc_display=  RocCurveDisplay(fpr=fpr, tpr=tpr)
-            roc_display.plot()
-            plt.show()
-
-            cm = confusion_matrix(y_test,y_test_pred)
-            disp = ConfusionMatrixDisplay(cm,display_labels=clf.classes_)
-            disp.plot()
-            plt.show()
-
-            train_sizes, train_scores, valid_scores = learning_curve(clf,X_train,y_train,train_sizes=np.linspace(0.1,1.0,10),cv=5)
-            train_scores_mean = np.mean(train_scores,axis=1)
-            train_scores_std = np.std(train_scores,axis=1)
-            valid_scores_mean = np.mean(valid_scores,axis=1)
-            valid_scores_std =  np.std(valid_scores,axis=1)
-
-            # plt.figure(figsize=(10, 6))
-            plt.plot(train_sizes, train_scores_mean, label='Training Score', color='blue')
-            plt.fill_between(train_sizes, train_scores_mean - train_scores_std, train_scores_mean + train_scores_std, alpha=0.1, color='blue')
-            plt.plot(train_sizes, valid_scores_mean, label='Cross-Validation Score', color='orange')
-            plt.fill_between(train_sizes, valid_scores_mean - valid_scores_std, valid_scores_mean + valid_scores_std, alpha=0.1, color='orange')
-            plt.xlabel('Training Examples')
-            plt.ylabel('Score')
-            plt.title('Learning Curve')
-            plt.legend(loc='best')
-            plt.grid()
-            plt.show()
-
-
-
-            # fig = plot_regression_result(y_test,y_test_pred)
-            # figure_agg = draw_figure(window['-CANVAS-'].TKCanvas, fig)
-
-            # train_score = [['R2', r2_score(y_train,y_train_pred)],
-            #                 ['MSE',mean_squared_error(y_train,y_train_pred)],
-            #                 ['MAE',mean_absolute_error(y_train,y_train_pred)],
-            #                 ['MAX',max_error(y_train,y_train_pred)],
-            #                 ['RMSE',mean_squared_error(y_train,y_train_pred, squared=False)],
-            #                 ['MAPE',mean_absolute_percentage_error(y_train,y_train_pred)]]
-
-            # test_score =[['R2', r2_score(y_test,y_test_pred)],
-            #             ['MSE',mean_squared_error(y_test,y_test_pred)],
-            #             ['MAE',mean_absolute_error(y_test,y_test_pred)],
-            #             ['MAX',max_error(y_test,y_test_pred)],
-            #             ['RMSE',mean_squared_error(y_test, y_test_pred, squared=False)],
-            #             ['MAPE',mean_absolute_percentage_error(y_test, y_test_pred)]]
-
-            # window['-TABLETRAIN-'].update(values = train_score)
-            # window['-TABLETEST-'].update(values = test_score)
-            # window['-CONTROL-'].update(visible = True)
-
-        # save image.
-        if event == 'Save Trained Model':
-            is_saved = True
-
-            # save model to user_model dic.
-            filename = 'users_model/'+ f'{classfier}.joblib'
-            joblib.dump(clf, filename)
-            sg.popup('Your model have been saved in Train-ML!')
-
-        if event == 'Save Displayed Result':
-            filepath =sg.popup_get_file('Open',no_window=True,save_as=True,file_types=[("PDF","*.pdf"),("PNG","*.png"),("JPG","*.jpg")])
-            # if filepath:
-            #     fig.savefig(fname = filepath)
-            #     sg.popup('Your model have been saved in Train-ML!')
-            # else:
-            #     sg.popup_error('The filepath is invalid!')
-            # filepath = sg.popup_get_file('Save as', no_window=True,save_as= True,default_extension='.csv')
-            # if filepath:
-            #     with open(filepath,"w",newline="") as csvfile:
-            #         csvwriter = csv.writer(csvfile)
-            #         csvwriter.writerow(['Train result'])
-            #         csvwriter.writerow(['Metric', 'Score'])
-            #         for row in train_score:
-            #             csvwriter.writerow(row)
-            #         csvwriter.writerow(['Test result'])
-            #         csvwriter.writerow(['Metric', 'Score'])
-            #         for row in test_score:
-            #             csvwriter.writerow(row)
-
-        if event == 'View Optimal Parameters':
-            sg.popup(f'Best Parameters:{best_params}')
-
-        if event == 'Explain with SHAP':
-            explain_model_shap(model_explain,classfier, X_train,X_test)
-
-        if event == 'Explain with LIME':
-            explain_model_lime(model_explain, X_train, X_test)
-
-        if event == 'Help':
-            para_text = param_tips[classfier]
-            help_text = '\n\n'.join([f'{key}:{value}' for key,value in para_text.items()])
-            sg.popup_scrolled(help_text,title=f'Parameter Tips for {classfier}',text_color='blue')
-
-        if event == 'Back':
-            if is_saved == False:
-                is_yes = sg.popup('You do not save your model. Do you want to save your trained model first?',button_type=sg.POPUP_BUTTONS_YES_NO)
-                if is_yes == 'Yes':
-                    continue
-            window.close()
-            main_windows.un_hide()
-            main_windows['-NONE_ENSEMBLE-'].update(True)
-
-        if event == 'Exit':
-            if is_saved == False:
-                is_yes = sg.popup('You do not save your model. Do you want to save your trained model first?',button_type=sg.POPUP_BUTTONS_YES_NO)
-                if is_yes == 'Yes':
-                    continue
-
-            is_yes = sg.popup('Are you sure to exit the ML Module?',button_type=sg.POPUP_BUTTONS_YES_NO)
-            if is_yes == 'Yes':
-                window.close()
-                main_windows.close()
-
-    window.close()
-
-
-def ensembelML_window_classification(main_windows,event,para_list,X_train,X_test,y_train,y_test):
-    ensemble_method = event
-    model_list =[]
-    field =[]
-    figure_agg = None
-    is_saved = False
-
-    if ensemble_method == '-BAG-':
-        base_model = para_list[0][0]
-        base_model_param = para_list[0][1]
-        layout = [[sg.pin(sg.Frame('',layout=[[sg.Text(f'{base_model}'),sg.Text(f"{base_model_param}")]],expand_x=True, expand_y=True,pad=(0,0)),expand_x=True,expand_y=True,shrink=True),sg.Frame('',layout=[[sg.Button('Train and Predict', size=(20,2))]])]]
-        classifier = classifier_dict[base_model]
-        classifier.set_params(**base_model_param)
-        ensemble_model = BaggingClassifier(estimator=classifier,
-                        n_estimators=10, random_state=0)
-    elif ensemble_method =='-STACK-':
-        for i in range(len(para_list)):
-            base_model = para_list[i][0]
-            base_model_param = para_list[i][1]
-            field += [[sg.Text(f'{base_model}'),sg.Text(f"{base_model_param}")]]
-            classifier = classifier_dict[base_model]
-            classifier.set_params(**base_model_param)
-            model_list.append((base_model,classifier))
-        layout = [[sg.pin(sg.Frame('',layout=field,expand_x=True, expand_y=True,pad=(0,0)),expand_x=True,expand_y=True,shrink=True),sg.Frame('',layout=[[sg.Button('Train and Predict', size=(20,2))]])]]
-        ensemble_model = StackingClassifier(estimators=model_list[:-1],final_estimator=model_list[-1][1],cv=10)
-    elif ensemble_method == '-VOTE-':
-        for i in range(len(para_list)):
-            base_model = para_list[i][0]
-            base_model_param = para_list[i][1]
-            field += [[sg.Text(f'{base_model}'),sg.Text(f"{base_model_param}")]]
-            classifier = classifier_dict[base_model]
-            classifier.set_params(**base_model_param)
-            model_list.append((base_model,classifier))
-        layout += [[sg.pin(sg.Frame('',layout=field,expand_x=True, expand_y=True,pad=(0,0)),expand_x=True,expand_y=True,shrink=True),sg.Frame('',layout=[[sg.Button('Train and Predict', size=(20,2))]])]]
-        ensemble_model = VotingClassifier(estimators=model_list)
-
-    layout +=[[ sg.Frame('',layout=[[
-            sg.Column([[sg.Text('Result')],[sg.Canvas(key='-CANVAS-',size=(400,400),background_color='white')]],expand_x=True,expand_y=True),
-            sg.Column([[sg.Text('Train Score')],[sg.Table(values=[],headings=['Metric', 'Score'],auto_size_columns=True,hide_vertical_scroll=True, key='-TABLETRAIN-',expand_x=True)],
-                        [sg.VPush()], [sg.Text('Test Score')],[sg.Table(values=[],headings=['Metric', 'Score'],auto_size_columns=True, hide_vertical_scroll=True, expand_x=True,key='-TABLETEST-')],
-                        ],expand_x=True,expand_y=True)]],
-                        expand_x=True, expand_y=True,visible=True,key = '-CONTROL-')],
-                        [sg.Frame('',layout=[[sg.pin(sg.Column([[sg.Button('Explain with SHAP'),sg.Button('Explain with LIME'), sg.Button('View Optimal Parameter'), sg.Button('Save Trained Model'),sg.Button('Save Displayed Result'),sg.Button('Back',button_color='red',pad=(10,10)), sg.Button('Exit',button_color='red',pad=(10,10)),sg.Push()]],expand_x= True,pad =(0,0)),expand_x=True)]])]]
-
-    window = sg.Window(f'{ensemble_method}',layout=layout)
-
-    while True:
-        event,values = window.read()
-
-        if event ==sg.WIN_CLOSED:
-            main_windows.un_hide()
-            break
-
-        if event =='Train and Predict':
-            if figure_agg:
-                delete_figure_agg(figure_agg)
-
-            ensemble_model.fit(X_train, y_train)
-
-
-            model_explain = ensemble_model
-
-            y_test_pred = ensemble_model.predict(X_test)
-            report = classification_report(y_test,y_test_pred)
-            sg.popup(report)
-
-            y_score = ensemble_model.decision_function(X_test)
-            fpr, tpr,_ = roc_curve(y_test,y_score,pos_label=2)
-
-            roc_display=  RocCurveDisplay(fpr=fpr, tpr=tpr)
-            roc_display.plot()
-            plt.show()
-
-            cm = confusion_matrix(y_test,y_test_pred)
-            disp = ConfusionMatrixDisplay(cm,display_labels=ensemble_model.classes_)
-            disp.plot()
-            plt.show()
-
-            train_sizes, train_scores, valid_scores = learning_curve(ensemble_model,X_train,y_train,train_sizes=np.linspace(0.1,1.0,10),cv=5)
-            train_scores_mean = np.mean(train_scores,axis=1)
-            train_scores_std = np.std(train_scores,axis=1)
-            valid_scores_mean = np.mean(valid_scores,axis=1)
-            valid_scores_std =  np.std(valid_scores,axis=1)
-
-            # plt.figure(figsize=(10, 6))
-            plt.plot(train_sizes, train_scores_mean, label='Training Score', color='blue')
-            plt.fill_between(train_sizes, train_scores_mean - train_scores_std, train_scores_mean + train_scores_std, alpha=0.1, color='blue')
-            plt.plot(train_sizes, valid_scores_mean, label='Cross-Validation Score', color='orange')
-            plt.fill_between(train_sizes, valid_scores_mean - valid_scores_std, valid_scores_mean + valid_scores_std, alpha=0.1, color='orange')
-            plt.xlabel('Training Examples')
-            plt.ylabel('Score')
-            plt.title('Learning Curve')
-            plt.legend(loc='best')
-            plt.grid()
-            plt.show()
-            # y_test_pred = ensemble_model.predict(X_test)
-            # y_train_pred = ensemble_model.predict(X_train)
-
-            # fig = plot_regression_result(y_test,y_test_pred)
-            # figure_agg = draw_figure(window['-CANVAS-'].TKCanvas, fig)
-
-            # train_score = [['R2', r2_score(y_train,y_train_pred)],
-            #                 ['MSE',mean_squared_error(y_train,y_train_pred)],
-            #                 ['MAE',mean_absolute_error(y_train,y_train_pred)],
-            #                 ['MAX',max_error(y_train,y_train_pred)],
-            #                 ['RMSE',mean_squared_error(y_train,y_train_pred, squared=False)],
-            #                 ['MAPE',mean_absolute_percentage_error(y_train,y_train_pred)]]
-
-            # test_score =[['R2', r2_score(y_test,y_test_pred)],
-            #             ['MSE',mean_squared_error(y_test,y_test_pred)],
-            #             ['MAE',mean_absolute_error(y_test,y_test_pred)],
-            #             ['MAX',max_error(y_test,y_test_pred)],
-            #             ['RMSE',mean_squared_error(y_test, y_test_pred, squared=False)],
-            #             ['MAPE',mean_absolute_percentage_error(y_test, y_test_pred)]]
-
-            # window['-TABLETRAIN-'].update(values=train_score)
-            # window['-TABLETEST-'].update(values=test_score)
-            # window['-CONTROL-'].update(visible=True)
-
-        if event == 'Save Trained Model':
-            is_saved = True
-
-            # save model to user_model dic.
-            filename = 'users_model/'+ f'{ensemble_method}.joblib'
-            joblib.dump(ensemble_model, filename)
-            sg.popup('Your model have been saved in Train-ML!')
-
-        if event == 'Save Displayed Result':
-            pass
-            # filepath =sg.popup_get_file('Open',no_window=True,save_as=True,file_types=[("PDF","*.pdf"),("PNG","*.png"),("JPG","*.jpg")])
-            # if filepath:
-            #     fig.savefig(fname = filepath)
-            #     sg.popup('Your model have been saved in Train-ML!')
-            # else:
-            #     sg.popup_error('The filepath is invalid!')
-            # filepath = sg.popup_get_file('Save as', no_window=True,save_as= True,default_extension='.csv')
-            # if filepath:
-            #     with open(filepath,"w",newline="") as csvfile:
-            #         csvwriter = csv.writer(csvfile)
-            #         csvwriter.writerow(['Train result'])
-            #         csvwriter.writerow(['Metric', 'Score'])
-            #         for row in train_score:
-            #             csvwriter.writerow(row)
-            #         csvwriter.writerow(['Test result'])
-            #         csvwriter.writerow(['Metric', 'Score'])
-            #         for row in test_score:
-            #             csvwriter.writerow(row)
-
-        if event == 'View Optimal Parameter':
-            param_text = '\n\n'.join(f'{item}' for item in para_list)
-            # help_text = '\n\n'.join([f'{key}:{value}' for key,value in para_list.items()])
-            sg.popup_scrolled(param_text,title=f'Parameter Tips for {classifier}',text_color='blue')
-            # sg.popup(f'Best Parameters:{para_list}')
-
-        if event == 'Explain with SHAP':
-            explain_model_shap(model_explain,classifier, X_train,X_test)
-
-        if event == 'Explain with LIME':
-            explain_model_lime(model_explain, X_train, X_test)
-
-        if event == 'Help':
-            para_text = param_tips[classifier]
-            help_text = '\n\n'.join([f'{key}:{value}' for key,value in para_text.items()])
-            sg.popup_scrolled(help_text,title=f'Parameter Tips for {classifier}',text_color='blue')
-
-        if event == 'Back':
-            if is_saved == False:
-                is_yes = sg.popup('You do not save your model. Do you want to save your trained model first?',button_type=sg.POPUP_BUTTONS_YES_NO)
-                if is_yes == 'Yes':
-                    continue
-            window.close()
-            main_windows.un_hide()
-            main_windows['-NONE_ENSEMBLE-'].update(True)
-
-        if event == 'Exit':
-            if is_saved == False:
-                is_yes = sg.popup('You do not save your model. Do you want to save your trained model first?',button_type=sg.POPUP_BUTTONS_YES_NO)
-                if is_yes == 'Yes':
-                    continue
-
-            is_yes = sg.popup('Are you sure to exit the ML Module?',button_type=sg.POPUP_BUTTONS_YES_NO)
-            if is_yes == 'Yes':
-                window.close()
-                main_windows.close()
-
-    window.close()
-
-
-
-######### Main windows related functions ##############
-
-def create_main_layout():
-
-    regression_layout = []
-    row = []
-    for button_name in regressor_dict.keys():
-        if button_name == 'RunAll':
-            row.append(sg.Button(button_name,key='-RUNALL_R-', size =(20,2), button_color='green',expand_x=True))
-        else:
-            row.append(sg.Button(button_name, size =(20,2),expand_x =True))
-        if len(row) == 6 :
-            regression_layout.append(row)
-            row =[]
-    if row:
-        extra_space = 6-len(row)
-        for i in range(extra_space):
-            row.append(sg.Text('',size =(20,2),expand_x =True))
-        regression_layout.append(row)
-
-    class_layout = []
-    row = []
-    for button_name in classifier_dict.keys():
-        if button_name == 'RunAll':
-            row.append(sg.Button(button_name, key='-RUNALL_C-', size =(20,2), button_color='green',expand_x=True))
-        else:
-            row.append(sg.Button(button_name, size =(20,2),expand_x=True))
-        if len(row) == 6 :
-            class_layout.append(row)
-            row =[]
-    if row:
-        extra_space = 6-len(row)
-        for i in range(extra_space):
-            row.append(sg.Text('',size =(20,2),expand_x =True))
-        class_layout.append(row)
-
-
-    layout = [
-              [sg.Text('Dataset:',justification='right'),sg.Input(size=(50, 1), key='-FILEPATH-',expand_x= True,readonly=True), sg.B('Load Data')],
-              [sg.Text('Select Features:',justification='right'),sg.Listbox(values=[], expand_x=True, key='-LISTBOXFEA-',select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE,size=(30,4)),
-               sg.Text('Select Label:',justification='left'),sg.Listbox(values=[], expand_x=True, key='-LISTBOXLAB-',select_mode=sg.LISTBOX_SELECT_MODE_SINGLE,size=(30,4))],
-            #  [sg.Text('Select Evaluation method:'),sg.Radio('Single Train-Test Split', group_id='-EVAL_METHOD-',default=True,key='-SPLIT-',),sg.Radio('K-fold Cross-Validation',group_id='-EVAL_METHOD-',key='-K_FOLD-')],
-             [sg.Text('Test Size:'),sg.Slider(range=(0,1),default_value=0.3,resolution=0.1,orientation='h', expand_x=True, key='-SKIDER-')],
-              [sg.Text('Select Ensemble Method:',justification='right'),sg.Radio('None', group_id='ENSEMBLE_METHOD', key='-NONE_ENSEMBLE-', default=True),
-               sg.Radio('Stacking',group_id='ENSEMBLE_METHOD', key = '-STACK-',enable_events=True), sg.Radio('Voting', group_id='ENSEMBLE_METHOD', key = '-VOTE-',enable_events=True),
-               sg.Radio('Bagging',group_id='ENSEMBLE_METHOD', key = '-BAG-',enable_events=True)],
-              [sg.Frame('Regression', layout=regression_layout,expand_x= True, expand_y= True, key='-FRAMEREGR-')],
-              [sg.Frame('Classfication', layout=class_layout,expand_x= True, expand_y= True, key='-FRAMEREGR2-')],
-              ]
-    window= sg.Window('Machine Learning:', layout = layout,finalize=True,  resizable=True, use_default_focus=False)
-    return window
-
-def main():
-    window = create_main_layout()
-    n_base_estimitors = 1
-    filepath =''
-    pre_event = None
-
-    while True:
-        event,values = window.read()
-        print(event,values)
-
-        if event ==sg.WIN_CLOSED:
-            break
-
-        if event == 'Load Data':
-            window['-FILEPATH-'].update(value='')
-            window['-LISTBOXFEA-'].update(values = [])
-            window['-LISTBOXLAB-'].update(values=[])
-            window['-NONE_ENSEMBLE-'].update(True)
-
-            filepath = sg.popup_get_file('Select a CSV file',file_types=[("CVS File","*.csv")],no_window=True)
-            # check if the data path is valid.
-            if filepath !='':
-                pre_fea =[]
-                current_fea =[]
-                pre_label =[]
-                current_label =[]
-                pre_split =[]
-                current_split =[]
-                window['-FILEPATH-'].update(value = filepath)
-                ##---------------- read data-----------------##
-                # load dataset
-                df_raw = pd.DataFrame(pd.read_csv(filepath))
-                # read column head
-                df_colname = list(df_raw.columns)
-
-                ##---------------- Update the features and labels in layout-----------------##
-                # df_colname.insert(0,'All')
-                window['-LISTBOXFEA-'].update(values = df_colname)
-                window['-LISTBOXLAB-'].update(values= df_colname)
-                sg.popup('Data Loaded Successfully')
-            else:
-                sg.popup('Filepath is incorrect!')
-        else:
-            if filepath =='':
-                window['-NONE_ENSEMBLE-'].update(True)
-                sg.popup('Please upload dataset!')
-                continue
-
-            current_label = values['-LISTBOXLAB-']
-            current_fea = values['-LISTBOXFEA-']
-            current_split = values['-SKIDER-']
-
-            if (current_split == pre_split and current_fea == pre_fea and current_label == pre_label): # If nothing change, the dataset does not change
-                    pass
-            else:
-                if current_label != [] and current_fea !=[] :
-                    pre_fea = current_fea
-                    pre_label = current_label
-                    pre_split = current_split
-                    X = df_raw[current_fea]
-                    y = df_raw[current_label]
-                    # Check if there is NA and String
-                    missing_value = y.isna().sum().sum() + X.isna().sum().sum()
-                    if  missing_value>0:
-                        sg.popup(f'There are {missing_value} missing values in this dataset, please upload dataset without misisng values.')
-
-                        continue
-
-                    constring = X.select_dtypes(include=['object']).shape[1]>0
-                    if constring>0:
-                        sg.popup('There are non-numeric data in this dataset.')
-                        continue
-
-                    X_train,X_test, y_train, y_test = train_test_split(X,y, test_size=current_split,random_state=42)
-                else:
-                    sg.popup_error('Please select label and feature')
-                    window['-NONE_ENSEMBLE-'].update(True)
-                    continue
-
-
-            if event == '-STACK-' or event =='-VOTE-' or event == '-BAG-':
-                num_model = sg.popup_get_text('How many base models in this ensemble ML? ')
-                if num_model == None:
-                    window['-NONE_ENSEMBLE-'].update(True)
-                    window[event].update(False)
-                else:
-                    num_model = int(num_model)
-                    if num_model>1:
-                        n_base_estimitors = num_model
-                        model_list =[]
-                    else:
-                        window['-NONE_ENSEMBLE-'].update(True)
-                        window[event].update(False)
-                        sg.popup('please re-input!')
-
-            if event in regressor_dict:
-                if values['-NONE_ENSEMBLE-']:
-                        method = event
-                        window.hide()
-                        singleML_window_regression(window,method,X_train,X_test,y_train,y_test)
-                elif values['-VOTE-']:
-                    # if pre_event == None:
-                    #     pre_event = 'Regression'
-                    # elif pre_event == 'Classification':
-                    #     sg.popup('If you ')
-                    #     continue
-
-                    if event == 'LinearRegression':
-                        layout =[]
-                    else:
-                        param_grid = default_param_grids[event]
-                        layout = create_param_input_fields(param_grid,0)
-                    layout += [[sg.Button('Add'),sg.Button('Cancel')]]
-                    window_model = sg.Window(f'{event}',layout)
-                    event_model,value_model = window_model.read(close=True)
-
-                    if event_model == 'Add':
-                        if len(model_list) == n_base_estimitors:
-                            sg.popup(f'You have {n_base_estimitors}.')
-                            model_text = '\n\n'.join(f'{item}' for item in model_list)
-                            ensemble_ok = sg.popup_scrolled(model_text,title='Ensemble_Stack models',yes_no=True)
-                            if ensemble_ok == 'Yes':
-                                ensembelML_window_regression(window,'-VOTE-',model_list,X_train,X_test,y_train,y_test)
-                            else:
-                                model_list = []
-                                sg.popup(f'All your base-models have been removed, please select{n_base_estimitors}!')
-                        else:
-                            param={}
-                            if event != 'LinearRegression':
-                                for key in default_param_grids[event].keys():
-                                    item = value_model[f'-Param_None_{key}-']
-                                    try:
-                                        if '.' in item:
-                                            item = float(item)
-                                        else:
-                                            item = int(item)
-                                    except ValueError:
-                                        item = item
-                                    param[key] = item
-
-
-                            model_list.append([event,param])
-                            if len(model_list) == n_base_estimitors:
-                                model_text = '\n\n'.join(f'{item}' for item in model_list)
-                                ensemble_ok = sg.popup_scrolled(model_text,title='Ensemble_Stack models',yes_no=True)
-                                if ensemble_ok == 'Yes':
-                                    ensembelML_window_regression(window,'-VOTE-',model_list,X_train,X_test,y_train,y_test)
-                                else:
-                                    model_list = []
-                                    sg.popup(f'All your base-models have been removed, please select{n_base_estimitors}!')
-
-                elif values['-STACK-']:
-                    if event == 'LinearRegression':
-                        layout =[]
-                    else:
-                        param_grid = default_param_grids[event]
-                        layout = create_param_input_fields(param_grid,0)
-                    layout += [[sg.Button('Add'),sg.Button('Cancel')]]
-                    window_model = sg.Window(f'{event}',layout)
-                    event_model,value_model = window_model.read(close=True)
-                    if event_model == 'Add':
-                        if len(model_list) == n_base_estimitors:
-                            sg.popup(f'You have {n_base_estimitors} models added, this one cannot be added.')
-                            model_text = '\n\n'.join(f'{item}' for item in model_list)
-                            ensemble_ok = sg.popup_scrolled(model_text,title='Ensemble_Stack models',yes_no=True)
-                            if ensemble_ok == 'Yes':
-                                ensembelML_window_regression(window, '-STACK-',model_list,X_train,X_test,y_train,y_test)
-                            else:
-                                model_list = []
-                                sg.popup(f'All your base-models have been removed, please select{n_base_estimitors}!')
-                        else:
-                            param={}
-                            if event != 'LinearRegression':
-                                for key in default_param_grids[event].keys():
-                                    item = value_model[f'-Param_None_{key}-']
-                                    try:
-                                        if '.' in item or 'e-' in item:
-                                            item = float(item)
-                                        else:
-                                            item = int(item)
-                                    except ValueError:
-                                        item = item
-                                    param[key] = item
-
-                            model_list.append([event,param])
-                            if len(model_list) == n_base_estimitors:
-                                model_text = '\n\n'.join(f'{item}' for item in model_list)
-                                ensemble_ok = sg.popup_scrolled(model_text,title='Ensemble_Stack models',yes_no=True)
-                                if ensemble_ok == 'Yes':
-                                    ensembelML_window_regression(window, '-STACK-',model_list,X_train,X_test,y_train,y_test)
-                                else:
-                                    model_list = []
-                                    sg.popup(f'All your base-models have been removed, please select{n_base_estimitors}!')
-
-                elif values['-BAG-']:
-                    model_list =[]
-                    if event == 'LinearRegression':
-                        layout =[]
-                    else:
-                        param_grid = default_param_grids[event]
-                        layout = create_param_input_fields(param_grid,0)
-                    layout += [[sg.Button('Add'),sg.Button('Cancel')]]
-                    window_model = sg.Window(f'{event}',layout)
-                    event_model,value_model = window_model.read(close=True)
-
-                    param={}
-                    if event != 'LinearRegression':
-                        for key in default_param_grids[event].keys():
-                            item = value_model[f'-Param_None_{key}-']
-                            try:
-                                if '.' in item or 'e-' in item:
-                                    item = float(item)
-                                else:
-                                    item = int(item)
-                            except ValueError:
-                                item = item
-                            param[key] = item
-
-                    model_list.append([event,param])
-                    model_text = '\n\n'.join(f'{item}' for item in model_list)
-                    ensemble_ok = sg.popup_scrolled(model_text,title='Ensemble_Stack models',yes_no=True)
-                    if ensemble_ok == 'Yes':
-                        ensembelML_window_regression(window, '-BAG-',model_list,X_train,X_test,y_train,y_test,True)
-                    else:
-                        model_list = []
-                        sg.popup(f'All your base-models have been removed, please select{n_base_estimitors}!')
-
-
-            if event in classifier_dict:
-                if values['-NONE_ENSEMBLE-']:
-                        method = event
-                        window.hide()
-                        singleML_window_classification(window,method,X_train,X_test,y_train,y_test)
-                elif values['-VOTE-']:
-                    param_grid = default_param_grids[event]
-                    layout = create_param_input_fields(param_grid,0)
-                    layout += [[sg.Button('Add'),sg.Button('Cancel')]]
-                    window_model = sg.Window(f'{event}',layout)
-                    event_model,value_model = window_model.read(close=True)
-                    if event_model == 'Add':
-                        if len(model_list) == n_base_estimitors:
-                            sg.popup(f'You have {n_base_estimitors}.')
-                            model_text = '\n\n'.join(f'{item}' for item in model_list)
-                            ensemble_ok = sg.popup_scrolled(model_text,title='Ensemble_Stack models',yes_no=True)
-                            if ensemble_ok == 'Yes':
-                                ensembelML_window_classification(window,'-VOTE-',model_list,X_train,X_test,y_train,y_test)
-                            else:
-                                model_list = []
-                                sg.popup(f'All your base-models have been removed, please select{n_base_estimitors}!')
-                        else:
-                            param={}
-                            for key in default_param_grids[event].keys():
-                                item = value_model[f'-Param_None_{key}-']
-                                try:
-                                    if '.' in item:
-                                        item = float(item)
-                                    else:
-                                        item = int(item)
-                                except ValueError:
-                                    item = item
-                                param[key] = item
-
-
-                            model_list.append([event,param])
-                            if len(model_list) == n_base_estimitors:
-                                model_text = '\n\n'.join(f'{item}' for item in model_list)
-                                ensemble_ok = sg.popup_scrolled(model_text,title='Ensemble_Stack models',yes_no=True)
-                                if ensemble_ok == 'Yes':
-                                    ensembelML_window_classification(window,'-VOTE-',model_list,X_train,X_test,y_train,y_test)
-                                else:
-                                    model_list = []
-                                    sg.popup(f'All your base-models have been removed, please select{n_base_estimitors}!')
-
-                elif values['-STACK-']:
-                    param_grid = default_param_grids[event]
-                    layout = create_param_input_fields(param_grid,0)
-                    layout += [[sg.Button('Add'),sg.Button('Cancel')]]
-                    window_model = sg.Window(f'{event}',layout)
-                    event_model,value_model = window_model.read(close=True)
-                    if event_model == 'Add':
-                        if len(model_list) == n_base_estimitors:
-                            sg.popup(f'You have {n_base_estimitors} models added, this one cannot be added.')
-                            model_text = '\n\n'.join(f'{item}' for item in model_list)
-                            ensemble_ok = sg.popup_scrolled(model_text,title='Ensemble_Stack models',yes_no=True)
-                            if ensemble_ok == 'Yes':
-                                ensembelML_window_classification(window, '-STACK-',model_list,X_train,X_test,y_train,y_test)
-                            else:
-                                model_list = []
-                                sg.popup(f'All your base-models have been removed, please select{n_base_estimitors}!')
-                        else:
-                            param={}
-                            for key in default_param_grids[event].keys():
-                                item = value_model[f'-Param_None_{key}-']
-                                try:
-                                    if '.' in item or 'e-' in item:
-                                        item = float(item)
-                                    else:
-                                        item = int(item)
-                                except ValueError:
-                                    item = item
-                                param[key] = item
-
-                            model_list.append([event,param])
-                            if len(model_list) == n_base_estimitors:
-                                model_text = '\n\n'.join(f'{item}' for item in model_list)
-                                ensemble_ok = sg.popup_scrolled(model_text,title='Ensemble_Stack models',yes_no=True)
-                                if ensemble_ok == 'Yes':
-                                    ensembelML_window_classification(window, '-STACK-',model_list,X_train,X_test,y_train,y_test)
-                                else:
-                                    model_list = []
-                                    sg.popup(f'All your base-models have been removed, please select{n_base_estimitors}!')
-
-                elif values['-BAG-']:
-                    model_list =[]
-                    param_grid = default_param_grids[event]
-                    layout = create_param_input_fields(param_grid,0)
-                    layout += [[sg.Button('Add'),sg.Button('Cancel')]]
-                    window_model = sg.Window(f'{event}',layout)
-                    event_model,value_model = window_model.read(close=True)
-
-                    param={}
-                    for key in default_param_grids[event].keys():
-                        item = value_model[f'-Param_None_{key}-']
-                        try:
-                            if '.' in item or 'e-' in item:
-                                item = float(item)
-                            else:
-                                item = int(item)
-                        except ValueError:
-                            item = item
-                        param[key] = item
-
-                    model_list.append([event,param])
-                    model_text = '\n\n'.join(f'{item}' for item in model_list)
-                    ensemble_ok = sg.popup_scrolled(model_text,title='Ensemble_Stack models',yes_no=True)
-                    if ensemble_ok == 'Yes':
-                        ensembelML_window_classification(window, '-BAG-',model_list,X_train,X_test,y_train,y_test,False)
-                    else:
-                        model_list = []
-                        sg.popup(f'All your base-models have been removed, please select{n_base_estimitors}!')
-
-
-    window.close()
-
-
-if __name__ == "__main__":
-    main()

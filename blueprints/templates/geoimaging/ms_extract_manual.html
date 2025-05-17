@@ -1,0 +1,57 @@
+<!-- Modal -->
+<div id="msManualExtractionModal" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Manual Extraction (MS Dataset)</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="bandSelect">Select Band:</label>
+                    <select class="form-control" id="bandSelect"></select>
+                </div>
+                <table id="plotDataTable" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Plot Index</th>
+                            <th>Plot Name</th>
+                            <th>Threshold</th>
+                            <th>Histogram</th>
+                            <th>Color Composite</th>
+                        </tr>
+                    </thead>
+                    <tbody id="plotDataTableBody"></tbody>
+                    <!-- Table rows will be dynamically populated -->
+                </table>
+                <button id="showHistogramBtn">Show Histogram</button>
+                <button id="showColorCompositeBtn">Show Color Composite</button>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        <li class="page-item">
+                            <a class="page-link" href="#" aria-label="Previous" id="prevPageBtn">
+                                <span aria-hidden="true">&laquo;</span>
+                                <span class="sr-only">Previous</span>
+                            </a>
+                        </li>
+                        <li class="page-item"><span class="page-link" id="currentPageDisplay">Page 1</span></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#" aria-label="Next" id="nextPageBtn">
+                                <span aria-hidden="true">&raquo;</span>
+                                <span class="sr-only">Next</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="okBtn">OK</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='geoimaging/extract_ms.js') }}"></script>

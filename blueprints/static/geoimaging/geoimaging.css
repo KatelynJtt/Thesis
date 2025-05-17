@@ -1,0 +1,233 @@
+#geoimaging_app .geoimaging-container {
+    display: flex;
+    height: 100%;
+}
+
+#geoimaging_app .geoimaging-content {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+#geoimaging_app .form-group {
+    margin-bottom: 20px;
+}
+
+#geoimaging_app .form-check-inline {
+    display: inline-block;
+    margin-right: 20px;
+}
+
+#geoimaging_app #rgbLayout, #msLayout {
+    margin-top: 20px;
+}
+
+#geoimaging_app .display-area {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#geoimaging_app #imageContainer {
+    margin-top: 20px;
+}
+
+#geoimaging_app #results {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+}
+
+#geoimaging_app .scroll-box {
+    height: 100px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background: #f9f9f9;
+}
+
+#geoimaging_app .spinner {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
+#geoimaging_app .visualization-container {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    min-height: 400px;
+}
+
+#geoimaging_app .visualization-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+#geoimaging_app .visualization-wrapper img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Tab Navigation Styling */
+#geoimaging_app .nav-tabs {
+    border-bottom: none;
+    margin-bottom: -1px;
+}
+
+#geoimaging_app .nav-tabs .nav-link {
+    border-radius: 8px 8px 0 0;
+    border: 1px solid #dee2e6;
+    margin-right: 4px;
+    background: #f8f9fa;
+    padding: 10px 20px;
+    color: #495057;
+}
+
+#geoimaging_app .nav-tabs .nav-link:hover {
+    background: #e9ecef;
+    border-color: #dee2e6;
+}
+
+#geoimaging_app .nav-tabs .nav-link.active {
+    background: #fff;
+    border-bottom-color: transparent;
+    position: relative;
+    z-index: 1;
+    color: #007bff;
+}
+
+/* Tab Content Styling */
+#geoimaging_app .tab-content {
+    border: 1px solid #dee2e6;
+    border-radius: 0 8px 8px 8px;
+    padding: 20px;
+    background: #fff;
+}
+
+/* Section Spacing */
+#geoimaging_app #rgbSection, 
+#geoimaging_app #msSection {
+    margin-bottom: 30px;
+}
+
+/* Form Elements Styling */
+#geoimaging_app .form-group {
+    margin-bottom: 15px;
+}
+
+#geoimaging_app .form-control {
+    max-width: 300px;
+}
+
+/* Visualization Container */
+#geoimaging_app .visualization-container {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    min-height: 200px;
+}
+
+/* Button Spacing */
+#geoimaging_app .btn {
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+/* Status Messages */
+#geoimaging_app #rgbAutoExtractStatus, 
+#geoimaging_app #rgbManualExtractStatus, 
+#geoimaging_app #msAutoExtractStatus, 
+#geoimaging_app #msManualExtractStatus {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+#geoimaging_app .section-title {
+    color: #2c3e50;
+    margin: 30px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #3498db;
+}
+
+#geoimaging_app .subsection-title {
+    color: #34495e;
+    margin: 20px 0 15px;
+    font-size: 1.5rem;
+}
+
+#geoimaging_app .processing-section {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#geoimaging_app .section-divider {
+    height: 2px;
+    background: linear-gradient(to right, transparent, #e0e0e0, transparent);
+    margin: 40px 0;
+}
+
+.image-container {
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.image-container img {
+    margin-bottom: 10px;
+}
+
+.image-container p {
+    margin: 5px 0;
+    font-weight: bold;
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+

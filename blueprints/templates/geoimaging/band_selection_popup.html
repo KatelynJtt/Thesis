@@ -1,0 +1,13 @@
+<!-- templates/band_selection_popup.html -->
+<div class="popup" id="bandSelectionPopup">
+    <h3>Select Band</h3>
+    <select id="bandSelect">
+        <option value="red">Red</option>
+        <option value="green">Green</option>
+        <option value="blue">Blue</option>
+        <option value="rededge">Red Edge</option>
+        <option value="nir" selected>NIR</option>
+    </select>
+    <button id="selectBandBtn">Select</button>
+</div>
+<script src="{{ url_for('static', filename='geoimaging/hist_cc_shape_visual.js') }}"></script>

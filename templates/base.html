@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV File Viewer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap 5 stack -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <button id="addSourceBtn">ADD SOURCE</button>
+            <div id="fileList">
+                {% for file in files %}
+                    <div class="file-item">
+                        <button class="file-btn" data-filename="{{ file }}">{{ file }}</button>
+                        <span class="delete-btn" data-filename="{{ file }}">&times;</span>
+                    </div>
+                {% endfor %}
+            </div>            
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn {% if active_tab == 'home' %}active{% endif %}" data-tab="home">Home</button>
+            <button class="tab-btn" data-tab="overview">Overview</button>
+            <button class="tab-btn" data-tab="geoimaging">GeoImaging</button>
+            <button class="tab-btn" data-tab="eda">EDA</button>
+            <button class="tab-btn" data-tab="machinelearning">Machine Learning</button>
+        </div>
+
+        <div id="tab-content">
+            {{ content | safe }}
+        </div>
+
+        <div class="file-info-column">
+            <h3>File Info</h3>
+            <div id="file-info-content">
+                <p id="upload-prompt">Upload files to see their details here.</p>
+            </div>
+        </div>        
+    </div>
+    {% include 'upload_modal.html' %}
+
+    <!-- Popup Modal for Dataset Save and Add as Source Confirmation -->
+    <div class="modal" id="datasetCreatedModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Dataset Created Successfully</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>What would you like to do with the created dataset?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="saveAndAddBtn">Save and Add as Source</button>
+                    <button type="button" class="btn btn-secondary" id="saveOnlyBtn">Save Only</button>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup Modal for Conversion between Excel and CSV -->
+    <div class="modal" id="excelConversionModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Convert Excel to CSV</h5>
+                </div>
+                <div class="modal-body">
+                    <p>This file needs to be converted to CSV format for analysis. Would you like to convert it now?</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="convertBtn" class="btn btn-primary">Convert</button>
+                    <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>    
+    
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <script src="{{ url_for('geoimaging.static', filename='geoimaging/geoimaging.js') }}"></script>
+
+</body>
+</html>
+
